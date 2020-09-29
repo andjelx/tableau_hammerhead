@@ -1,0 +1,74 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+
+
+# eclipse
+.settings/
+.classpath
+.project
+test.lock
+
+# intellij
+.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+
+
+# vscode
+.vscode/
+
+# terraform
+.terraform/
+
+# build artifacts
+bin/
+build/
+out/
+target/
+__pycache__/
+
+# from spring example java api project
+*.sw?
+.#*
+*#
+*~
+dependency-reduced-pom.xml
+*.sublime-*
+/scratch
+README.html
+
+# python compiled files
+*.pyc
+
+#### hammerhead pipeline ####
+artifacts
+env.list
+buildresult.txt
+logfiles.zip
+output.html
+output.json
+parameters.sh
+parameters.ps1
+parameters-upgrade.sh
+parameters-upgrade.ps1
+ssm.log
+src/install_on_linux/tsm-asset-keys.json
+src/install_on_linux/tsm-repository.json
+src/install_on_windows/tsm-repository.json
+
+# ignore any installers copied locally while testing
+*.exe
+!ChromeSetup.exe #Except for Chrome installer
+*.rpm
+
+# ignore configuration
+src/config/cli/*
+src/config/accounts/*
+!src/config/accounts/account_example.yaml
+src/config/defaultconfig.yaml
+
+/src/config/selected_region.yaml

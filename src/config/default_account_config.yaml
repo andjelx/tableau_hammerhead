@@ -1,0 +1,22 @@
+auth:
+  allowedAuthType: Any
+  tasAdminUser: 
+deploy:
+  stopWhenEqualTableauServerVersion: true
+ec2:
+  subnetType: private
+filestore:
+  flavor: Local
+license:
+  licenseKeyServer: 
+nessus:
+  groups: 
+  key: 
+  host: 
+  port: 
+repository:
+  flavor: Local
+rmt:
+  enabled: false
+splunk:
+  enabled: false

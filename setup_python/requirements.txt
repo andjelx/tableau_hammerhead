@@ -1,0 +1,18 @@
+#  In order to execute createinstance.py you will first need the following
+#- Python 3.7
+#- AWS credentials in your default local profile. Aws credentials are stored in c:\users\{username}\.aws\credentials file.
+#- Install Python Modules. Run the command "pip install -r requirements.txt" to install these python modules:
+boto3
+urllib3
+botostubs
+boto3-stubs
+botocore
+questionary==1.5.2
+prompt_toolkit
+pyyaml
+requests
+colorama
+
+# additional dependencies that are used by the internal project but should not be required for the external project:
+# slack
+# pg8000

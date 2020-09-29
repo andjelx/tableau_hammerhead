@@ -1,0 +1,152 @@
+# Overview: This cloud formation creates two IAM roles which allow the Hammerhead Pipeline to 
+# spin up instances of EC2 with Tableau Server in your account.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create IAM policies and roles to run the Hammerhead pipeline
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "User Settings"
+      Parameters:
+      - UserEmail
+Parameters:
+  UserEmail:
+    Description: Your email is required to create a tag with name=Creator and value={email}
+    Type: String
+Resources:
+  CreatePipelinePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PipelinePolicy
+      Roles:
+        - !Ref CreatePipelineRole  
+      PolicyDocument: >
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "VisualEditor0",
+              "Effect": "Allow",
+              "Action": [
+                "iam:PassRole",
+                "iam:ListAccountAliases"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+  CreateEc2Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: Ec2Policy
+      Roles:
+        - !Ref CreateEc2Role  
+      PolicyDocument: >
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "VisualEditor0",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeInstances",
+                "ec2:CreateTags"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "VisualEditor1",
+              "Effect": "Allow",
+              "Action": [
+                "s3:Get*",
+                "s3:List*"
+              ],
+              "Resource": [
+                "arn:aws:s3:::jl-hammerhead",
+                "arn:aws:s3:::jl-hammerhead/*"
+              ]
+            },
+            {
+              "Sid": "VisualEditor2",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:PutObjectAcl"
+              ],
+              "Resource": [
+                "arn:aws:s3:::jl-hammerhead/hammerhead-ec2-rw/*"
+              ]
+            },
+            {
+              "Action": [
+                "sts:*"
+              ],
+              "Resource": [
+                "*"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+  CreatePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tableauserver-ddo-pipeline
+      Description: Allow Hammerhead to manage EC2 resources and execute SSM tasks
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      MaxSessionDuration: 14400
+      Tags:
+      - Key: Creator
+        Value: !Ref UserEmail
+      AssumeRolePolicyDocument: >
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": "arn:aws:iam::610414253594:root"
+              },
+              "Action": "sts:AssumeRole",
+              "Condition": {}
+            }
+          ]
+        }
+  CreateEc2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: tableauserver-ddo-ec2
+      Description: Hammerhead pipeline assigns this role to the created EC2 instances
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      - arn:aws:iam::aws:policy/service-role/AmazonSSMMaintenanceWindowRole
+      MaxSessionDuration: 14400
+      Tags:
+      - Key: Creator
+        Value: !Ref UserEmail
+      AssumeRolePolicyDocument: >
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+  InstanceProfileForCreateEc2Role:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      InstanceProfileName: tableauserver-ddo-ec2
+      Path: "/"
+      Roles: 
+        - 
+          Ref: "CreateEc2Role"        

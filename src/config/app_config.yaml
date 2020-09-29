@@ -1,0 +1,11 @@
+appconfig:
+  s3_hammerhead_bucket: None
+  s3_hammerdeploy_backuppath: hammerhead-ec2-rw/hammerdeploy-backups
+  teamcity_url: ""
+  hammerdeploy_service: hammerservice
+  defaultRegion:
+  enableSlackNotifications: false
+dbconfig:
+  host: None
+  dbname: None
+  username: None

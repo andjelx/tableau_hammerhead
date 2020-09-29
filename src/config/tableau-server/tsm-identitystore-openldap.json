@@ -1,0 +1,35 @@
+{
+   "configEntities":{
+     "identityStore":{
+       "_type":"identityStoreType",
+       "type":"activedirectory",
+       "bind":"simple",
+       "directoryServiceType":"openldap",
+       "domain":"replaceme-domain",
+       "hostname": "replaceme-domainControllerHostname",
+       "membersRetrievalPageSize":"1000",
+       "nickname":"tsi",
+       "username":"CN=ReplaceMeUsername,OU=replaceme-ou,DC=replaceme-dc,DC=replaceme-dc",
+       "password":"ReplaceMePassword",
+       "identityStoreSchemaType":{
+         "distinguishedNameAttribute":"distinguishedName",
+         "member":"member",
+         "memberOf":"memberOf",
+         "rangeRetrieval":"true",
+         "serverSideSorting":"true",
+         "groupBaseFilter":"(objectClass=group)",
+         "groupClassNames":["group"],
+         "groupDescription":"description",
+         "groupEmail":"mail",
+         "groupName":"sAMAccountName",
+         "userBaseFilter":"(objectClass=user)",
+         "userClassNames":["user"],
+         "userDisplayName":"displayName",
+         "userEmail":"mail",
+         "userJpegPhoto":"jpegPhoto",
+         "userThumbnail":"thumbnailPhoto",
+         "userUsername":"sAMAccountName"
+       }
+     }
+   }
+ }

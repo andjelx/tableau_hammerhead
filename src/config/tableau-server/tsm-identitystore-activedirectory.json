@@ -1,0 +1,14 @@
+{
+    "configEntities":{
+       "identityStore":{
+          "_type":"identityStoreType",
+          "type":"activedirectory",
+          "domain": "myDomainName",
+          "nickname": "myDomainNickname",
+          "directoryServiceType": "activedirectory",
+          "bind": "simple",
+          "username": "ReplaceMeUsername",
+          "password": "ReplaceMePassword"
+       }
+    }
+ }
