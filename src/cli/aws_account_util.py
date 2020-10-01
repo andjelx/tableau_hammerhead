@@ -52,32 +52,31 @@ def describe_all_ec2_instances(region):
     return boto3.client("ec2", region_name=region).describe_instances()
 
 
+def count_hammerhead_ec2_instances(region):
+    ec2 = boto3.resource('ec2', region_name=region)
+    return len(list(ec2.instances.filter(Filters=[EC2_HAMMERHEAD_FILTER])))
+
+
 def get_ec2_instances(instance_state, region):
     ec2 = boto3.resource('ec2', region_name=region)
     instance_list = []
+    instance_state_filter = {'Name': 'instance-state-name', 'Values': [instance_state]} if instance_state else {}
+
     instances = ec2.instances.filter(
         Filters=[
-            {'Name': 'instance-state-name', 'Values': [instance_state]},
+            instance_state_filter,
             EC2_HAMMERHEAD_FILTER
         ])
     for instance in instances:
-        for tags in instance.tags:
-            if tags["Key"] == 'Name':
-                instance_name = tags["Value"]
-        # TODO: This Looks like a bug - check why try/exception added
-        try:
-            instance_list.append(
-                f"{instance.id}  {instance_name}  type:{instance.instance_type}  state:{instance_state}")
-        except:
-            instance_list.append(
-                f"{instance.id}  type:{instance.instance_type}  state:{instance_state}")
+        instance_name = ""
+        for tag in instance.tags:
+            if tag["Key"] == 'Name':
+                instance_name = f"  {tag['Value']}"
+        instance_list.append({
+            "value": instance.id,
+            "title": f"{instance.id}{instance_name}  type:{instance.instance_type}  state:{instance_state}"
+        })
     return instance_list
-
-
-def get_ec2_all_instances(region):
-    ec2 = boto3.resource('ec2', region_name=region)
-    instances = ec2.instances.filter(Filters=[EC2_HAMMERHEAD_FILTER])
-    return [f"{i.id} -> [State: {i.state['Name']}]" for i in instances]
 
 
 def start_instance(instance_id, region):
@@ -144,7 +143,9 @@ def get_target_account_region(region: str):
 
 def get_instance_profile_list(region: str):
     response = boto3.client('iam', region_name=region).list_instance_profiles(PathPrefix='/', MaxItems=999)
-    return [instp['InstanceProfileName'] for instp in response['InstanceProfiles']]
+    #TODO: test what happens when there are no instance profiles
+    profiles = [instp['InstanceProfileName'] for instp in response['InstanceProfiles']]
+    return profiles
 
 
 def get_s3_bucket_name_list(region: str):

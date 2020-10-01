@@ -20,7 +20,8 @@ custom_style = Style([
     ("instruction", ""),
     ("text", ""),
 ])
-CancelAnswer = "Cancel"
+
+CancelAnswer = questionary.Choice(title="Cancel")
 
 
 class Question:
@@ -33,11 +34,11 @@ class Question:
 
     def asking(self):
         self.ask()
-        while not self.validateAndPrint():
+        while not self.validate_and_print():
             self.ask()
         return self.answer
 
-    def validateAndPrint(self):
+    def validate_and_print(self):
         error = self.validate()
         if error is not None:
             print(error)
@@ -92,7 +93,7 @@ class ModifyActionQuestion(Question):
                 self.stop,
                 self.reboot,
                 self.terminate,
-                "Upgrade Tableau Server *",
+                questionary.Choice(title="Upgrade Tableau Server", disabled="is not yet supported"),
                 # "Get Password *",
                 # "Attach 1TB Drive *",
                 # "Attach 2TB Drive *",
@@ -124,15 +125,23 @@ class NewOrExistingConfigQuestion(Question):
         return self.answer
 
 
+def _fill_up_instances_choices(state, region):
+    choices_list = [questionary.Choice(title=i['title'], value=i['value']) for i in
+                    aws_account_util.get_ec2_instances(state, region)]
+    if choices_list:
+        choices_list.append(CancelAnswer)
+    return choices_list
+
+
 class StartEC2Instance(Question):
     NoStoppedInstances = "NoneStopped"
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = aws_account_util.get_ec2_instances("stopped", region)
-        if choices_list is None or len(choices_list) == 0:
+        choices_list = _fill_up_instances_choices("stopped", region)
+        if not choices_list:
             return self.NoStoppedInstances
-        choices_list.append(CancelAnswer)
+
         self.answer = questionary.select(
             "Start which instance?",
             choices=choices_list,
@@ -145,10 +154,10 @@ class StopEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = aws_account_util.get_ec2_instances("running", region)
-        if choices_list is None or len(choices_list) == 0:
+        choices_list = _fill_up_instances_choices("running", region)
+        if not choices_list:
             return self.NoStartedInstances
-        choices_list.append(CancelAnswer)
+
         self.answer = questionary.select(
             "Stop which instance?",
             choices=choices_list,
@@ -161,10 +170,10 @@ class RebootEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = aws_account_util.get_ec2_all_instances(region)
-        if choices_list is None or len(choices_list) == 0:
+        choices_list = _fill_up_instances_choices(None, region)
+        if not choices_list:
             return self.NoInstances
-        choices_list.append(CancelAnswer)
+
         self.answer = questionary.select(
             "Reboot which instance?",
             choices=choices_list,
@@ -177,11 +186,10 @@ class TerminateEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = aws_account_util.get_ec2_all_instances(region)
-        if choices_list is None or len(choices_list) == 0:
+        choices_list = _fill_up_instances_choices(None, region)
+        if not choices_list:
             return self.NoInstances
 
-        choices_list.append(CancelAnswer)
         self.answer = questionary.select(
             "Terminate which instance?\n[Note: This action cannot be reverted]",
             choices=choices_list,
@@ -369,8 +377,7 @@ class TasVersionIdQuestion(Question):
         if len(results) == 0:
             versions = ["2020.3.1", "2020.2.6", "2019.4.12"]
         else:
-            versions = [item.strip() for item in results]
-            versions = [(v + ".0" if v.count(".") < 2 else v) for v in versions]
+            versions = [(f"{v.strip()}.0" if v.count(".") < 2 else v.strip()) for v in results]
             versions = [item for item in versions if item > "2019"]
 
         self.answer = questionary.select(

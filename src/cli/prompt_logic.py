@@ -194,7 +194,7 @@ def install_tableau_server():
         tableau_license_key = prompts.TasLicenseKey().ask()
 
         print()
-        configFileName = prompts.AccountYamlFileNameQuestion().asking()
+        yaml_file_name = prompts.AccountYamlFileNameQuestion().asking()
 
         data = {
             "aws": {
@@ -227,14 +227,13 @@ def install_tableau_server():
                 "nodeCount": nodeCount
             }
         }
-        yaml_file_name = config_file_util.create_config_file(data, configFileName)
+        config_file_util.create_config_file(data, yaml_file_name)
 
         print(f"configuration file saved as src/{config_file_util.CLI_CONFIG_PATH}/{yaml_file_name}")
         print("\n\n ========== Install Tableau Server STEP 3/3   Confirm")
     else:
         yaml_file_name = prompts.ChoseExistingYamlFileQuestion().ask()
 
-    yaml_file_name = config_file_util.get_config_file_full_path(yaml_file_name)
     confirm_and_start_install(yaml_file_name)
 
 

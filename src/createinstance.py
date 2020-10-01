@@ -313,6 +313,9 @@ def run(reqModel):
     # Write info file with the information
     installtableau.write_hammerhead_info(instanceIds, reqModel.ec2.operatingSystemType, reqModel.aws)
 
+    # STEP Install Tools
+    install_tools.install_chrome(reqModel.result.instanceId, reqModel.ec2.operatingSystemType, reqModel.aws)
+
     # createdesktop.install(reqModel)
 
     for nodeIdx in range(1, nodesCount+1):
@@ -342,12 +345,10 @@ def run(reqModel):
     configutil.printElapsed('')
     print()
 
-    #STEP - Additional TAS admins
-    if reqModel.elb is None:  #skip for hammerdeploy builds since we will do it after the restore
+    # STEP - Additional TAS admins
+    if reqModel.elb is None:  #  skip for hammerdeploy builds since we will do it after the restore
         authlogic.addTableauServerAdmins(reqModel)
 
-    #STEP Install Tools
-    # install_tools.install_chrome(reqModel.result.instanceId, reqModel.ec2.operatingSystemType, reqModel.aws)
 
     #STEP - Wait for Tableau home page to load, Insert Hammerlog, Notify Slack
     if reqModel.ec2.subnetType == models.SubnetType.protected:

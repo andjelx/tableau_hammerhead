@@ -35,14 +35,16 @@ def _list_instances_for_account(region):
     instances = []
     for i in hhInstances:
         ii = InstanceInfo()
-        ii.instanceId=i['InstanceId']
-        ii.name= [t['Value'] for t in i['Tags'] if t['Key'] == 'Name'][0]
-        ii.creator=[t['Value'] for t in i['Tags'] if t['Key'] == 'Creator'][0]
-        ii.state=i['State']['Name']
-        ii.launchTime=i['LaunchTime']
-        ii.privateIp=i['PrivateIpAddress'] if ('PrivateIpAddress' in i) else None
-        ii.publicIp=i['PublicIpAddress'] if 'PublicIpAddress' in i else None
-        ii.instanceType=i['InstanceType']
+        ii.instanceId = i['InstanceId']
+        ii.name = [t['Value'] for t in i['Tags'] if t['Key'] == 'Name']  # Name tag can be absent
+        ii.name = ii.name[0] if ii.name else ""
+        ii.creator = [t['Value'] for t in i['Tags'] if t['Key'] == 'Creator']  # Creator tag can be absent
+        ii.creator = ii.creator[0] if ii.creator else ""
+        ii.state = i['State']['Name']
+        ii.launchTime = i['LaunchTime']
+        ii.privateIp = i['PrivateIpAddress'] if ('PrivateIpAddress' in i) else None
+        ii.publicIp = i['PublicIpAddress'] if 'PublicIpAddress' in i else None
+        ii.instanceType = i['InstanceType']
         instances.append(ii)
     return instances, totalEc2Count
 
@@ -58,7 +60,7 @@ def run():
     print(f"Current AWS Account: {targetAccountName} {targetAccountId}")
     print()
 
-    (instances, totalEc2Count)=_list_instances_for_account(region)
+    (instances, totalEc2Count) = _list_instances_for_account(region)
     print(f"{len(instances)} of {totalEc2Count} EC2 instances were created by Hammerhead\n")
 
     if len(instances) == 0:

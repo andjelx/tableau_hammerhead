@@ -47,10 +47,10 @@ def go(data, config_file_name, region, batch=False):
     data['auth']['moreTasAdmins'] = None
     del(data['cli'])  # Remove the stuff that is specific to REPL
 
-    if not batch:
-        config_file_util.translated_cli_config_to_account_config(data, config_file_name)
+    # if not batch:
+    config_file_util.translated_cli_config_to_account_config(data, config_file_name)
 
-    reqModel = createinstance_getsettings.loadReqModel(config_path=config_file_name)
+    reqModel = createinstance_getsettings.loadReqModel()
     reqModel.ec2.userScriptPrefix = "empty"
     createinstance.run(reqModel)
 

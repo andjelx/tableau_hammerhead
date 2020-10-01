@@ -23,18 +23,7 @@ What does Hammerhead CLI do?
 or just\
 ```./run```
   
-### Batch installation
-
-To verify config
-```
-python -m src.cli.start --action verify --config src/config/cli/your_config.yaml
-```
-
-To batch install
-```
-python -m src.cli.start --action install --config src/config/cli/your_config.yaml
-```
-  
+ 
 
 ### Release Notes
 [Release Notes](release_notes.md)
@@ -72,7 +61,19 @@ Workflow\
 ![](utility/resources/hammerhead_flow.png "Hammerhead CLI Flow ")
   
   
-  
+### Batch installation
+Once an install config yaml file has been created in the src/config/cli directory, you can run Hammerhead CLI in batch mode which allows you to start and run the Tableau Server install without any human interaction. This is useful for automation scenarios.
+
+To verify config
+```
+python -m src.cli.start --action verify --config src/config/cli/your_config.yaml
+```
+
+To batch install
+```
+python -m src.cli.start --action install --config src/config/cli/your_config.yaml
+```
+
 ---
 ## Contributors
 Joseph Fluckiger\
