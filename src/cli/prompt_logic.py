@@ -5,6 +5,7 @@ import os
 from colorama import Fore
 from . import kick_off_hammerhead, aws_account_util, prompts, config_file_util, report_server_instances, \
     modify_instance, aws_check
+
 from .pre_checks import do_prechecks
 
 
@@ -41,7 +42,7 @@ def print_welcome_message():
 # """)
 
 
-def confirm_and_start_install(yaml_file_name):
+def confirm_and_start_install(yaml_file_name: str, batch: bool = False):
     data = config_file_util.load_config_file(yaml_file_name)
     region = data['aws'].get('region')
     if region is None:
@@ -49,9 +50,10 @@ def confirm_and_start_install(yaml_file_name):
         return
 
     CHAR_LINE = "-"*32
-    print()
-    print(CHAR_LINE)
-    print("Confirm to Install Tableau Server")
+    if not batch:
+        print()
+        print(CHAR_LINE)
+        print("Confirm to Install Tableau Server")
     print(CHAR_LINE)
     print(f"AWS Target Account: {data['aws']['targetAccount']} {data['aws']['targetAccountId']}")
     print(f"AWS Region: {region}")
@@ -72,21 +74,24 @@ def confirm_and_start_install(yaml_file_name):
     print(f"Tableau Server Initial Tableau Username: {data['auth']['tasAdminUser']}")
     print(CHAR_LINE)
 
-    do_prechecks(data, region)
-    print(CHAR_LINE)
-
-    answer = questionary.select(
-        "Are you ready to install Tableau Server?",
-        choices=["yes", "cancel"], style=prompts.custom_style).ask()
-    if answer == "yes":
-        print("\n---------------------------------------------------")
-        print("Starting EC2 instance and installing Tableau Server")
-        print("---------------------------------------------------")
-        kick_off_hammerhead.go(data, yaml_file_name, region)
-        print(Fore.GREEN + "\nDone")
-        press_enter_to_continue()
+    if batch:
+        kick_off_hammerhead.go(data, yaml_file_name, region, batch)
     else:
-        print(Fore.RED + "User cancelled")
+        do_prechecks(data, region)
+        print(CHAR_LINE)
+
+        answer = questionary.select(
+            "Are you ready to install Tableau Server?",
+            choices=["yes", "cancel"], style=prompts.custom_style).ask()
+        if answer == "yes":
+            print("\n---------------------------------------------------")
+            print("Starting EC2 instance and installing Tableau Server")
+            print("---------------------------------------------------")
+            kick_off_hammerhead.go(data, yaml_file_name, region, batch)
+            print(Fore.GREEN + "\nDone")
+            press_enter_to_continue()
+        else:
+            print(Fore.RED + "User cancelled")
 
 
 def loadTargetAccountsList():
@@ -161,8 +166,14 @@ def install_tableau_server():
         if bucket_name == prompts.S3BucketQuestion.createNewOption:
             bucket_name = aws_account_util.create_s3_bucket(region)
 
-        instance_profile = prompts.InstanceProfileQuestion().ask(region)
-        instance_type = "m5.4xlarge"
+        instance_profiles_list = aws_account_util.get_instance_profile_list(region)
+        if instance_profiles_list:
+            instance_profile = prompts.InstanceProfileQuestion().ask(instance_profiles_list)
+        else:
+            instance_profile_name = prompts.CreateInstanceProfileQuestion().ask()
+            instance_profile = aws_account_util.create_instance_profile(instance_profile_name, region, bucket_name)
+    
+        instance_type = prompts.PromptInstanceType().ask()
         key_name = prompts.Ec2KeyPairQuestion().ask(region)
         security_group_ids_unparsed = prompts.SecurityGroupIdsQuestion().asking_with_param(region)
         security_group_ids = []
@@ -178,7 +189,7 @@ def install_tableau_server():
         tas_admin_pass = prompts.TasAdminPassQuestion().asking_with_param(tas_admin_username)
         tsVersionId = prompts.TasVersionIdQuestion().ask()
         operatingSystem = prompts.OperatingSystemQuestion().asking()
-        authType = prompts.TasAuthenticationQuestion().asking()
+        authType = prompts.TasAuthenticationQuestion().ask()
         nodeCount = prompts.TasNodeCountQuestion().asking()
         tableau_license_key = prompts.TasLicenseKey().ask()
 
@@ -223,6 +234,7 @@ def install_tableau_server():
     else:
         yaml_file_name = prompts.ChoseExistingYamlFileQuestion().ask()
 
+    yaml_file_name = config_file_util.get_config_file_full_path(yaml_file_name)
     confirm_and_start_install(yaml_file_name)
 
 

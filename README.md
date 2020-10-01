@@ -23,6 +23,19 @@ What does Hammerhead CLI do?
 or just\
 ```./run```
   
+### Batch installation
+
+To verify config
+```
+python -m src.cli.start --action verify --config src/config/cli/your_config.yaml
+```
+
+To batch install
+```
+python -m src.cli.start --action install --config src/config/cli/your_config.yaml
+```
+  
+
 ### Release Notes
 [Release Notes](release_notes.md)
 

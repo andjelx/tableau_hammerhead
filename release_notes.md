@@ -1,5 +1,9 @@
 # Tableau Hammerhead CLI - Release Notes
 
+Sep 29 2020
+
+- Added possibility to run config verification and batch installation from CLI
+
 Sep 27 2020
 
 - Implement SG pre-check for IP ranges

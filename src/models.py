@@ -9,8 +9,8 @@ from .include import configutil
 class AwsSettings:
     targetAccount: str  # friendly name of target account including team name.
     targetAccountId: str  # integer aws account ID
-    targetAccountRole: str  # IAM account role assumed to spin up resources in target aws account
     region: str  # AWS Region (corresponds to subnet IDs and security groups)
+    targetAccountRole: str = None  # IAM account role assumed to spin up resources in target aws account
     pointOfContact: str = None  # Persons responsible for the AWS Account
     stackId: str = None  # S3 folder where scripts and configuration files are uploaded/downloaded
     budgetGroup: str = None  # accounting budget group
@@ -46,7 +46,7 @@ class Ec2Settings:
     doesAmiSupportSpot: bool = False
     subnetType: str = None  # enum: SubnetType
     nodesCount: int = 0
-    operatingSystem: str = None  # The AMI name which maps to the operatingSystems.json file, examples: 'AmazonLinux', 'AmazonWindows2019'.
+    operatingSystem: str = None  # The AMI name which maps to the operating_systems.yaml file, examples: 'AmazonLinux', 'AmazonWindows2019'.
     operatingSystemType: str = None  # 'windows' or 'linux'
     primaryVolumeSize: int = 0  # Primary ebs volume size
     dataVolumeSize: int = 0  # Secondary data ebs volume size

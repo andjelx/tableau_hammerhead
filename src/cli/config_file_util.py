@@ -4,7 +4,7 @@ import os
 
 
 CLI_CONFIG_PATH = "config/cli"
-HAMMERHEADCLI_VERSION = "0.2"
+HAMMERHEADCLI_VERSION = "0.3"
 
 
 def create_config_file(data, file_name):
@@ -15,8 +15,7 @@ def create_config_file(data, file_name):
 
 
 def load_config_file(file_name):
-    file_name_path = get_config_file_full_path(file_name)
-    with open(file_name_path, 'r') as f:
+    with open(file_name, 'r') as f:
         accountConfig = yaml.load(f, Loader=yaml.FullLoader)
     return accountConfig
 

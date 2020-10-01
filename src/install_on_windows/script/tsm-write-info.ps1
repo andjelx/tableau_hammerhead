@@ -29,7 +29,7 @@ $Body | Out-File $filename
 
 # Make a symlink to the desktop
 $WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("c:\Users\$TAS_AdminUsername\Desktop\$filebase.lnk")
+$Shortcut = $WshShell.CreateShortcut("C:\Users\Public\Desktop\$filebase.lnk")
 $Shortcut.TargetPath = $filename
 $Shortcut.Save()
 

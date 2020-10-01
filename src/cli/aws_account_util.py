@@ -1,3 +1,4 @@
+import json
 import re
 import os
 import boto3
@@ -8,7 +9,6 @@ import tempfile
 import yaml
 from typing import Dict, List, Optional
 
-from .config_file_util import load_config_file
 from ..include import aws_sts
 from . import aws_check
 
@@ -192,3 +192,114 @@ def get_selected_region() -> str:
     with open(SELECTED_REGION_CONFIG, 'r') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
         return data['aws_region']
+
+
+def create_instance_profile(name: str, region: str, bucket_name: str) -> str:
+    instance_profile_name = name
+    role_name = f"{name}-role"
+
+    session = boto3.session.Session(region_name=region)
+    iam = session.client('iam')
+
+    policy_document = json.dumps({
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "VisualEditor0",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeInstances",
+                "ec2:CreateTags"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "VisualEditor1",
+              "Effect": "Allow",
+              "Action": [
+                "s3:Get*",
+                "s3:List*"
+              ],
+              "Resource": [
+                f"arn:aws:s3:::{bucket_name}",
+                f"arn:aws:s3:::{bucket_name}/*"
+              ]
+            },
+            {
+              "Sid": "VisualEditor2",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:PutObjectAcl"
+              ],
+              "Resource": [
+                f"arn:aws:s3:::{bucket_name}/hammerhead-ec2-rw/*"
+              ]
+            },
+            {
+              "Action": [
+                "sts:*"
+              ],
+              "Resource": [
+                "*"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+    })
+
+
+    assume_role_policy_document = json.dumps({
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+    })
+
+    iam.create_role(
+        RoleName=role_name,
+        AssumeRolePolicyDocument=assume_role_policy_document,
+        MaxSessionDuration=4*3600,  # 4 hours
+        Tags=[
+            {
+                'Key': 'Creator',
+                'Value': 'Hammerhead CLI'
+            },
+        ]
+
+    )
+
+    ManagedPolicyArns = ["arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+        "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+        "arn:aws:iam::aws:policy/service-role/AmazonSSMMaintenanceWindowRole"]
+
+    for p in ManagedPolicyArns:
+        iam.attach_role_policy(
+            RoleName=role_name,
+            PolicyArn=p
+        )
+
+    iam.put_role_policy(
+        RoleName=role_name,
+        PolicyName='hammerhead_policy',
+        PolicyDocument=policy_document
+    )
+
+    iam.create_instance_profile(
+        InstanceProfileName=instance_profile_name,
+    )
+
+    iam.add_role_to_instance_profile(
+        InstanceProfileName=instance_profile_name,
+        RoleName=role_name
+    )
+
+    return instance_profile_name

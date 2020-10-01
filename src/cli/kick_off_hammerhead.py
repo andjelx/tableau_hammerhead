@@ -5,9 +5,9 @@ from . import config_file_util, aws_account_util
 from ..include import configutil, security, tsm_version
 
 
-def go(data, conig_file_name, region):
+def go(data, config_file_name, region, batch=False):
     #STEP - Validate
-    print(f"validating {conig_file_name} data")
+    print(f"validating {config_file_name} data")
     if not validateData(data):
         return
 
@@ -17,7 +17,7 @@ def go(data, conig_file_name, region):
     os.environ['ddo20_EC2_OperatingSystem'] = data['cli']['operatingSystem']
     os.environ['ddo40_TAS_Authentication'] = data['cli']['authType']
     os.environ['ddo50_TAS_Nodes'] = str(data['cli']['nodeCount'])
-    cic = conig_file_name.replace('.yaml', '')
+    cic = config_file_name.replace('.yaml', '')
     os.environ['ddo10_CreateInstanceConfig'] = cic
     currentUser = os.getlogin()  # get current operating system login for creator
     os.environ['ddoCreator'] = currentUser
@@ -46,9 +46,11 @@ def go(data, conig_file_name, region):
     data['auth']['allowedAuthType'] = "Local"
     data['auth']['moreTasAdmins'] = None
     del(data['cli'])  # Remove the stuff that is specific to REPL
-    config_file_util.translated_cli_config_to_account_config(data, conig_file_name)
 
-    reqModel=createinstance_getsettings.loadReqModel()
+    if not batch:
+        config_file_util.translated_cli_config_to_account_config(data, config_file_name)
+
+    reqModel = createinstance_getsettings.loadReqModel(config_path=config_file_name)
     reqModel.ec2.userScriptPrefix = "empty"
     createinstance.run(reqModel)
 

@@ -5,7 +5,7 @@ import boto3
 import botocore
 from colorama import Fore
 
-from . import aws_check, aws_account_util
+from . import aws_check
 
 
 def check_security_groups(groups: list, region: str) -> list:
@@ -28,7 +28,8 @@ def check_security_groups(groups: list, region: str) -> list:
                 ports_to_check[ingress_rule['FromPort']] += 1
 
             for r in ranges_to_check:
-                if not (ingress_rule['IpProtocol'] == 'tcp' and ingress_rule['FromPort'] <= r['FromPort'] and ingress_rule['ToPort'] >= r['ToPort']):
+                if not (ingress_rule['IpProtocol'] == 'tcp' and ingress_rule['FromPort'] <= r['FromPort'] and
+                        ingress_rule['ToPort'] >= r['ToPort']):
                     sg_check_2[sg].append(
                         f"Access to TCP port range {r['FromPort']} - {r['ToPort']} in Security Groups is missing")
 
@@ -54,6 +55,9 @@ def check_subnets_existence(subnets, region: str):
             err_msg = error.response['Error']['Message']
             ret.append(err_msg)
             m = re.search(".*ID '(subnet-.+)'.*", err_msg)
+            if not m:
+                return ret
+
             subnets.remove(m.group(1))
 
     return ret
@@ -81,7 +85,7 @@ def check_license_format(license: str, is_cluster: bool = False) -> list:
     return list() if pattern.match(license) else [f"format not matched"]
 
 
-def do_prechecks(data, region):
+def do_prechecks(data, region) -> bool:
     check_list = [
         {
             "func": check_license_format,
@@ -115,6 +119,7 @@ def do_prechecks(data, region):
         # }
     ]
 
+    ret = True
     for i, c in enumerate(check_list, start=1):
         print(f"Executing pre-check {i}/{len(check_list)}: {c['description']}", end=" - ")
 
@@ -124,5 +129,8 @@ def do_prechecks(data, region):
         r = c["func"](*c["params"])
         if r:
             print(Fore.RED + "FAILED: " + ", ".join(r))
+            ret = False
         else:
             print(Fore.GREEN + "PASSED")
+
+    return ret

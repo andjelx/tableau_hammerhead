@@ -24,7 +24,7 @@ def get_configuration(data: dict) -> models.ReqModel:
     return reqModel
 
 
-def load_mapconfig_from_disk():
+def load_mapconfig_from_disk(config_path=None):
     cic = os.getenv('ddo10_CreateInstanceConfig')
     if cic is None or '(select' in cic:
         raise app_error.UserError("Please select a target aws account configuration")
@@ -32,15 +32,16 @@ def load_mapconfig_from_disk():
     path = f'{base_path}/config/default_account_config.yaml'
     with open(path, 'r') as f:
         default_data = yaml.load(f, Loader=yaml.FullLoader)
-    path = f'{base_path}/config/accounts/{cic}.yaml'
+    path = config_path if config_path else f'{base_path}/config/accounts/{cic}.yaml'
     with open(path, 'r') as f:
         account_data = yaml.load(f, Loader=yaml.FullLoader)
     mapConfig = configutil.merge_dictionaries(account_data, default_data)
     mapConfig['configSelection'] = cic
-    return (cic, mapConfig)
+    return cic, mapConfig
 
 
 def validate_model(reqModel: models.ReqModel):
+    OS_DEFINITION_FILE = f'{os.path.dirname(__file__)}/config/operating_systems.yaml'
     dte = datetime.datetime.now()
     reqModel.aws.stackId = f'hammerhead-ec2-rw/{dte.strftime("%Y-%m")}/{reqModel.configSelection}/{dte.strftime("%d-%H%M")}-{str(uuid.uuid4())[-5:]}/bootstrap'
     reqModel.ec2.primaryVolumeSize = int(os.getenv('ddo_EC2_PrimaryVolumeSize', '200'))
@@ -69,9 +70,10 @@ def validate_model(reqModel: models.ReqModel):
         if "techsupport" in reqModel.configSelection.lower():
             raise app_error.UserError("The Salesforce Case Number field is mandatory when the Target AWS Account is techsupport")
     # load values from operating system file
-    operatingSystemsJsonFile = f'{os.path.dirname(__file__)}/config/operatingSystems.json'
-    with open(operatingSystemsJsonFile, 'r') as f:
-        mapConfigOS = json.load(f)
+
+    with open(OS_DEFINITION_FILE, 'r') as f:
+        mapConfigOS = yaml.load(f, Loader=yaml.FullLoader)
+
     reqModel.ec2.operatingSystemType = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['Type']
     reqModel.ec2.baseImage = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['AMI'][reqModel.aws.region]  # get ami ID for target region
     reqModel.ec2.deviceName = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['DeviceName']
@@ -106,7 +108,7 @@ def validate_model(reqModel: models.ReqModel):
         reqModel.tableau.installTableauDesktop = True
 
 
-def loadReqModel() -> models.ReqModel:
+def loadReqModel(config_path=None) -> models.ReqModel:
     #### load ReqModel from configuration files and environment variables.###
     variables = [
         'ddoCreator',
@@ -118,7 +120,8 @@ def loadReqModel() -> models.ReqModel:
     for variable in variables:
         if os.getenv(variable) in [None, '']:
             raise ValueError(f'{variable} envvar is not set')
-    (cic, mapConfig) = load_mapconfig_from_disk()
+    (cic, mapConfig) = load_mapconfig_from_disk(config_path=config_path)
+
     configutil.replace_env_values(mapConfig)
     reqModel: models.ReqModel = get_configuration(mapConfig)
     validate_model(reqModel)

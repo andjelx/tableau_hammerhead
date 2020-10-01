@@ -4,6 +4,8 @@ import re
 import requests
 import os
 
+from prompt_toolkit.validation import Validator
+
 from . import aws_account_util, config_file_util
 from prompt_toolkit.styles import Style
 
@@ -258,11 +260,20 @@ class S3BucketQuestion(Question):
 
 
 class InstanceProfileQuestion(Question):
-    def ask(self, region: str):
-        profiles = aws_account_util.get_instance_profile_list(region)
+    def ask(self, instance_profiles: list):
         self.answer = questionary.select(
             "Which IAM Instance Profile? (Maps IAM Role to EC2 instance)",
-            choices=profiles,
+            choices=instance_profiles,
+            style=custom_style).ask()
+        return self.answer
+
+
+class CreateInstanceProfileQuestion(Question):
+    def ask(self):
+        self.answer = questionary.text(
+            "Please provide the name for instance profile",
+            validate=Validator.from_callable(lambda x: 0 < len(x) < 64,
+                                             error_message="Instance profile name shouldn't be empty or longer than 64 chars"),
             style=custom_style).ask()
         return self.answer
 
@@ -270,7 +281,7 @@ class InstanceProfileQuestion(Question):
 class Ec2KeyPairQuestion(Question):
     def ask(self, region):
         keypair_list = aws_account_util.get_key_pair_list(region)
-        if keypair_list == []:
+        if not keypair_list:
             keypair_list.append("No Keys are available in this region")
         self.answer = questionary.select(
             "EC2 key pair? (Name of Pem file used to access EC2)",
@@ -303,7 +314,7 @@ class SecurityGroupIdsQuestion(Question):  # FutureDev: show display name of sec
 
 class SubnetIdsQuestion(Question):  # FutureDev: show display name of subnets and VPCs
     def ask(self):
-        region = self.answer
+        region = self.param
         self.answer = questionary.checkbox(
             "Which Subnet ID(s)?",
             choices=aws_account_util.get_available_subnets(region),
@@ -353,13 +364,15 @@ class TasAdminPassQuestion(Question):
 class TasVersionIdQuestion(Question):
     def ask(self):
         request_versions = requests.get("https://www.tableau.com/support/releases/server")
-        results = re.findall(r"class=\"text--medium-body\">(.*?) <span", request_versions.text)
-        versions = [item for item in results if item > "2019"]
-        i = 0
-        for item in versions:
-            if item.count(".") < 2:
-                versions[i] = item + ".0"
-            i += 1
+        results = re.findall(r'class="text--medium-body">(.*?)<span', request_versions.text, re.S)
+        print(f"found {len(results)} release versions on tableau.com")
+        if len(results) == 0:
+            versions = ["2020.3.1", "2020.2.6", "2019.4.12"]
+        else:
+            versions = [item.strip() for item in results]
+            versions = [(v + ".0" if v.count(".") < 2 else v) for v in versions]
+            versions = [item for item in versions if item > "2019"]
+
         self.answer = questionary.select(
             "Version of Tableau Server to Install?",
             choices=versions,
@@ -390,17 +403,12 @@ class TasAuthenticationQuestion(Question):
         self.answer = questionary.select(
             "Tableau Server Authentication Type?",
             choices=[
-                "Local",
-                "LDAP",
-                "ActiveDirectory"
+                questionary.Choice(title="Local"),
+                questionary.Choice(title="LDAP", disabled="Only Local Auth is currently supported"),
+                questionary.Choice(title="ActiveDirectory", disabled="Only Local Auth is currently supported")
             ],
             style=custom_style).ask()
         return self.answer
-
-    def validate(self):
-        if self.answer != "Local":
-            return f"Only Local Auth is currently supported"
-        return None
 
 
 class TasNodeCountQuestion(Question):
@@ -445,3 +453,16 @@ class ConfirmActionByTyping(Question):
         if self.answer is None or self.answer != self.param:
             return f"Please type '{self.param}' to continue, or 'skip' to skip"
         return None
+
+
+class PromptInstanceType(Question):
+    def ask(self):
+        self.answer = questionary.select(
+            "Instance type",
+            choices=[
+                questionary.Choice(title="m5a.4xlarge | 16 CPU, 64Gb", value="m5a.4xlarge"),
+                questionary.Choice(title="r5a.2xlarge |  8 CPU, 64Gb", value="r5a.2xlarge"),
+                questionary.Choice(title="r5a.4xlarge | 16 CPU, 128Gb", value="r5a.4xlarge"),
+            ],
+            style=custom_style).ask()
+        return self.answer
