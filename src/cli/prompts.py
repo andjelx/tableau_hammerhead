@@ -321,11 +321,16 @@ class SecurityGroupIdsQuestion(Question):  # FutureDev: show display name of sec
 
 
 class SubnetIdsQuestion(Question):  # FutureDev: show display name of subnets and VPCs
+    no_subnets = "No subnets available"
+
     def ask(self):
         region = self.param
+        subnets = aws_account_util.get_available_subnets(region)
+        if len(subnets) == 0:
+            subnets = [self.no_subnets]
         self.answer = questionary.checkbox(
             "Which Subnet ID(s)?",
-            choices=aws_account_util.get_available_subnets(region),
+            choices=subnets,
             style=custom_style).ask()
         return self.answer
 
@@ -427,9 +432,6 @@ class TasNodeCountQuestion(Question):
         return self.answer
 
     def validate(self):
-        if self.answer != 1:
-            print(f"Note that multi-node is in beta ...")
-            return None
         return None
 
 

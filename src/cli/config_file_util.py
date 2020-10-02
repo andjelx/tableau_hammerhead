@@ -4,7 +4,7 @@ import os
 
 
 CLI_CONFIG_PATH = "config/cli"
-HAMMERHEADCLI_VERSION = "0.5"
+HAMMERHEADCLI_VERSION = "0.6"
 
 
 def create_config_file(data, file_name):
