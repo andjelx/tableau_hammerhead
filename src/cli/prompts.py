@@ -6,7 +6,7 @@ import os
 
 from prompt_toolkit.validation import Validator
 
-from . import aws_account_util, config_file_util
+from . import aws_account_util, config_file_util, pre_checks
 from prompt_toolkit.styles import Style
 
 custom_style = Style([
@@ -49,10 +49,8 @@ class Question:
 class ActionQuestion(Question):
     quit = "Quit"
     install_ts = "Install Tableau Server"
-    report = "Report Instances"
     modify = "Modify Instance"
     installprep = "Install Tableau Prep Builder"
-    changeregion = "Change Selected Region"
 
     def ask(self):
         self.answer = questionary.select(
@@ -60,9 +58,8 @@ class ActionQuestion(Question):
             choices=[
                 self.quit,
                 self.install_ts,
-                self.report,
+                # self.report,
                 self.modify,
-                self.changeregion,
 #                "Install Tableau Desktop *",
 #                self.installprep,
 #                "Install Tableau Resource Monitoring Tool *"
@@ -83,12 +80,16 @@ class ModifyActionQuestion(Question):
     stop = "Stop Instance"
     reboot = "Reboot Instance"
     terminate = "Terminate Instance"
+    report = "Report Instances"
+    changeregion = "Change Selected Region"
 
     def ask(self):
         self.answer = questionary.select(
             "Modify Action?",
             choices=[
                 self.main_menu,
+                self.changeregion,
+                self.report,
                 self.start,
                 self.stop,
                 self.reboot,
@@ -403,12 +404,6 @@ class OperatingSystemQuestion(Question):
             style=custom_style).ask()
         return self.answer
 
-    def validate(self):
-        if self.answer != "AmazonLinux2":
-            print(f"Note that Windows install is still in beta ...")
-            return None
-        return None
-
 
 class TasAuthenticationQuestion(Question):
     def ask(self):
@@ -436,16 +431,12 @@ class TasNodeCountQuestion(Question):
 
 
 class TasLicenseKey(Question):
+
     def ask(self):
         self.answer = questionary.text(
             "Tableau Server License Key? (leave empty for trial)",
             style=custom_style).ask()
         return self.answer
-
-    def validate(self):
-        if self.answer is None or len(self.answer) < 2:
-            return f"Please enter a valid license key"
-        return None
 
 
 class ConfirmActionByTyping(Question):

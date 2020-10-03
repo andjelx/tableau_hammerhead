@@ -157,7 +157,6 @@
 #         # run(prepModel)
 #         prepModel.result = models.ResultingTableauServer()
 #         prepModel.result.instanceId = "i-000c31e2b1d670b35"
-#         install_prep(prepModel)  #temp
 #     except Exception as ex:
 #         app_error.handleException(ex, "Create Prep Builder Instance")
 #

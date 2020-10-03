@@ -54,8 +54,10 @@ Target Cloud Platforms
 ---
 ### Images
   
-Screenshot\
+Screenshots\
 ![](utility/resources/screenshot_cli.png "Hammerhead CLI Flow ")
+
+![](utility/resources/screenshot_cli_modify.png "Hammerhead CLI Modify actions")
 
 Workflow\
 ![](utility/resources/hammerhead_flow.png "Hammerhead CLI Flow ")
@@ -79,6 +81,6 @@ python -m src.cli.start --action install --config src/config/cli/your_config.yam
 Joseph Fluckiger\
 Gustavo Armenta\
 Kevin Glover\
-Takashi Binns\
 Vijeth Shetty\
-Testing and feature input: Jeffrey Lehmann, Charlee McGee, Peter Han, Jim Schneidereit, and many more. Thank you!
+Takashi Binns\
+Testing and feature input: Jeffrey Lehmann, Jonathan MacDonald, Charlee McGee, Peter Han, Jim Schneidereit, and many more. Thank you!

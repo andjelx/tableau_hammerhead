@@ -1,10 +1,13 @@
 import pathlib
+import re
+
+import requests
 import yaml
 import os
 
+from colorama import Fore
 
 CLI_CONFIG_PATH = "config/cli"
-HAMMERHEADCLI_VERSION = "0.6"
 
 
 def create_config_file(data, file_name):
@@ -41,3 +44,17 @@ def translated_cli_config_to_account_config(config_yaml, file_name):
         os.mkdir(accounts_path)
     with open(accounts_path / file_name, 'w') as outfile:
         yaml.dump(config_yaml, outfile, default_flow_style=False, sort_keys=False)
+
+
+def check_latest_version(__version__: str) -> str:
+    VERSION_URL = "https://raw.githubusercontent.com/josephflu/tableau_hammerhead/master/src/cli/__init__.py"
+    req = requests.get(VERSION_URL)
+    if not req.status_code == 200:
+        print(Fore.RED + "Can't get latest version")
+        return
+
+    match = re.findall('^__version__\s*=\s*["\'](\d+\.\d+.\d+)["\']', req.text)
+    if match:
+        return match[0]
+
+    return

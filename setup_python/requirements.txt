@@ -12,6 +12,7 @@ prompt_toolkit
 pyyaml
 requests
 colorama
+packaging
 
 # additional dependencies that are used by the internal project but should not be required for the external project:
 # slack

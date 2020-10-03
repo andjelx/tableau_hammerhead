@@ -80,9 +80,11 @@ def check_license_format(license: str, is_cluster: bool = False) -> list:
         else:
             return ["license can't be TRIAL for cluster"]
 
-    pattern = re.compile("^[A-Z]{4}-[A-Z]{4}-[A-Z]{4}-[A-Z]{4}-[A-Z]{4}$")
-
-    return list() if pattern.match(license) else [f"format not matched"]
+    pattern = re.compile("^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$")
+    if pattern.match(license):
+        return list()
+    else:
+        return [f"license should match format XXXX-XXXX-XXXX-XXXX-XXXX"]
 
 
 def do_prechecks(data, region) -> bool:

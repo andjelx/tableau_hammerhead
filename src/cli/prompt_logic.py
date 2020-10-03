@@ -3,13 +3,20 @@ import questionary
 import os
 
 from colorama import Fore
+from packaging import version
+
 from . import kick_off_hammerhead, aws_account_util, prompts, config_file_util, report_server_instances, \
-    modify_instance, aws_check
+    modify_instance, aws_check, pre_checks, __version__
 
 from .pre_checks import do_prechecks
 
 
 def print_welcome_message():
+    latest_version_msg = ""
+    latest_version = config_file_util.check_latest_version(__version__)
+    if latest_version and version.parse(latest_version) > version.parse(__version__):
+        latest_version_msg = Fore.RED + f"Newer version of CLI exists: {latest_version}"
+
     return print(r"""
              _    _                                     _                    _    _____ _      _____ 
             | |  | |                                   | |                  | |  / ____| |    |_   _|
@@ -30,7 +37,7 @@ def print_welcome_message():
                  "In order to spin up a Tableau Server on AWS, please answer a few questions\n"
                  "about your AWS account including: Which AWS region? Which VPC subnet? EC2 Instance Type? etc.\n"
                  "Read more at https://github.com/josephflu/tableau_hammerhead."
-                 f"     Hammerhead CLI version {config_file_util.HAMMERHEADCLI_VERSION} \n\n")
+                 f"     Hammerhead CLI version {__version__} \n{latest_version_msg}\n")
 
 
 # Then hammerhead will
@@ -109,10 +116,8 @@ def start_up_questions():
     {
         actionQ.quit: quit_installer,
         actionQ.install_ts: install_tableau_server,
-        actionQ.report: report_server_instances.run,
         actionQ.modify: show_modify_menu,
         actionQ.installprep: install_prep,
-        actionQ.changeregion: prompt_selected_region_and_save,
     }[actionQ.answer]()
     if actionQ.answer != actionQ.quit:
         print()
@@ -125,6 +130,8 @@ def show_modify_menu():
     actionQM.asking()
     {
         actionQM.main_menu: back_to_main_menu,
+        actionQM.changeregion: prompt_selected_region_and_save,
+        actionQM.report: report_server_instances.run,
         actionQM.start: modify_instance.start_tableau_server,
         actionQM.stop: modify_instance.stop_tableau_server,
         actionQM.reboot: modify_instance.reboot_tableau_server,
@@ -188,11 +195,13 @@ def install_tableau_server():
         tas_admin_username = prompts.TasAdminUsernameQuestion().asking()
         tas_admin_pass = prompts.TasAdminPassQuestion().asking_with_param(tas_admin_username)
         tsVersionId = prompts.TasVersionIdQuestion().ask()
-        operatingSystem = prompts.OperatingSystemQuestion().asking()
+        operatingSystem = prompts.OperatingSystemQuestion().ask()
         authType = prompts.TasAuthenticationQuestion().ask()
-        nodeCount = prompts.TasNodeCountQuestion().asking()
+        node_count = prompts.TasNodeCountQuestion().asking()
         tableau_license_key = prompts.TasLicenseKey().ask()
-
+        ret = pre_checks.check_license_format(tableau_license_key, node_count)
+        if len(ret) > 0:
+            print(f"warning, license key '{tableau_license_key}' is invalid. " + ret[0])
         print()
         yaml_file_name = prompts.AccountYamlFileNameQuestion().asking()
 
@@ -224,7 +233,7 @@ def install_tableau_server():
                 "s3Bucket": bucket_name,
                 "authType": authType,
                 "operatingSystem": operatingSystem,
-                "nodeCount": nodeCount
+                "nodeCount": node_count
             }
         }
         config_file_util.create_config_file(data, yaml_file_name)

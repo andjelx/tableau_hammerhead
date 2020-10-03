@@ -1,10 +1,15 @@
 import os
 import sys
 
+from colorama import Fore
+
+from src.cli import config_file_util
 from . import prompt_logic
 import colorama
 import argparse
 from . import batch
+from . import __version__
+from packaging import version
 
 # Init color support for Windows console
 colorama.init(autoreset=True)
@@ -29,6 +34,10 @@ if __name__ == "__main__":
     if not args.action:
         main()
     else:
+        latest_version = config_file_util.check_latest_version(__version__)
+        if latest_version and version.parse(latest_version) > version.parse(__version__):
+            print(Fore.Red + f"Newer version of CLI exists: {latest_version}")
+
         if not args.config or not os.path.exists(args.config):
             print("Config file not supplied or not exists")
             sys.exit(1)
