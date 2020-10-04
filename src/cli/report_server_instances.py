@@ -1,6 +1,6 @@
 import botocore
 
-from . import aws_account_util, prompt_logic, aws_check
+from . import aws_account_util, prompt_logic, aws_check, utils
 
 
 class InstanceInfo:
@@ -27,19 +27,17 @@ def _list_instances_for_account(region):
     for reservation in response["Reservations"]:
         totalEc2Count += len(reservation["Instances"])
         for instance in reservation["Instances"]:
-            if 'Tags' in instance:
-                for tag in instance['Tags']:
-                    if tag['Key'] == 'Pipeline' and tag['Value'] == 'ProjectHammerhead':
-                        hhInstances.append(instance)
+            tags = utils.convert_tags(instance.get('Tags'))
+            if tags.get('Pipeline', "") == 'ProjectHammerhead':
+                hhInstances.append(instance)
 
     instances = []
     for i in hhInstances:
         ii = InstanceInfo()
+        tags = utils.convert_tags(i.get('Tags'))
         ii.instanceId = i['InstanceId']
-        ii.name = [t['Value'] for t in i['Tags'] if t['Key'] == 'Name']  # Name tag can be absent
-        ii.name = ii.name[0] if ii.name else ""
-        ii.creator = [t['Value'] for t in i['Tags'] if t['Key'] == 'Creator']  # Creator tag can be absent
-        ii.creator = ii.creator[0] if ii.creator else ""
+        ii.name = tags.get('Name', "")
+        ii.creator = tags.get('Creator', "")
         ii.state = i['State']['Name']
         ii.launchTime = i['LaunchTime']
         ii.privateIp = i['PrivateIpAddress'] if ('PrivateIpAddress' in i) else None

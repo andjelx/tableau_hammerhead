@@ -66,14 +66,19 @@ Workflow\
 ### Batch installation
 Once an install config yaml file has been created in the src/config/cli directory, you can run Hammerhead CLI in batch mode which allows you to start and run the Tableau Server install without any human interaction. This is useful for automation scenarios.
 
+To list available configs
+```
+python -m src.cli.start --action list-configs
+```
+
 To verify config
 ```
-python -m src.cli.start --action verify --config src/config/cli/your_config.yaml
+python -m src.cli.start --action verify --config your_config.yaml
 ```
 
 To batch install
 ```
-python -m src.cli.start --action install --config src/config/cli/your_config.yaml
+python -m src.cli.start --action install --config your_config.yaml
 ```
 
 ---

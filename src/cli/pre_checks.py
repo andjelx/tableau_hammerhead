@@ -91,7 +91,7 @@ def do_prechecks(data, region) -> bool:
     check_list = [
         {
             "func": check_license_format,
-            "params": [data['license']['licenseKeyServer'], data['cli']['nodeCount'] > 1 or False],
+            "params": [data['license']['licenseKeyServer'], int(data['cli']['nodeCount']) > 1],
             "description": "license key format"
         },
         {

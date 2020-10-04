@@ -1,6 +1,7 @@
 import pathlib
 import questionary
 import os
+import re
 
 from colorama import Fore
 from packaging import version
@@ -10,14 +11,26 @@ from . import kick_off_hammerhead, aws_account_util, prompts, config_file_util, 
 
 from .pre_checks import do_prechecks
 
+def print_version():
+    try:
+        latest_version_msg = ""
+        able_to_check, latest_version_msg = config_file_util.check_latest_version(__version__)
+        if not able_to_check:
+            latest_version_msg = Fore.RED + f"(unable to check latest version: {latest_version_msg})"
+        elif version.parse(latest_version_msg) > version.parse(__version__):
+            latest_version_msg = Fore.GREEN + f"(Newer version available: {latest_version_msg})"
+        elif version.parse(latest_version_msg) == version.parse(__version__):
+            latest_version_msg = f"(up-to-date)"
+        elif version.parse(latest_version_msg) < version.parse(__version__):
+            latest_version_msg = f"(local version is pre-release, released version is {latest_version_msg})"
+            
+        print(f"Hammerhead CLI version {__version__} {latest_version_msg}\n")
+    except Exception as ex:
+        print(f"unable to check latest version. {ex}")
+
 
 def print_welcome_message():
-    latest_version_msg = ""
-    latest_version = config_file_util.check_latest_version(__version__)
-    if latest_version and version.parse(latest_version) > version.parse(__version__):
-        latest_version_msg = Fore.RED + f"Newer version of CLI exists: {latest_version}"
-
-    return print(r"""
+    print(r"""
              _    _                                     _                    _    _____ _      _____ 
             | |  | |                                   | |                  | |  / ____| |    |_   _|
             | |__| | __ _ _ __ ___  _ __ ___   ___ _ __| |__   ___  __ _  __| | | |    | |      | |  
@@ -31,13 +44,12 @@ def print_welcome_message():
                | | (_| | |_) | |  __/ (_| | |_| |  ____) | (_) | | | |_ \ V  V / (_| | | |  __/
                |_|\__,_|_.__/|_|\___|\__,_|\__,_| |_____/ \___/|_|  \__| \_/\_/ \__,_|_|  \___|
 
-              Welcome to Hammerhead CLI, the easiest way to install and manage Tableau Server on AWS
-
 """
+                 "Welcome to Hammerhead CLI, the easiest way to install Tableau Server on AWS.\n"
                  "In order to spin up a Tableau Server on AWS, please answer a few questions\n"
-                 "about your AWS account including: Which AWS region? Which VPC subnet? EC2 Instance Type? etc.\n"
-                 "Read more at https://github.com/josephflu/tableau_hammerhead."
-                 f"     Hammerhead CLI version {__version__} \n{latest_version_msg}\n")
+                 "about your AWS account including: Which AWS region? EC2 Instance Type? VPC subnet?\n")
+                 # "Read more at https://github.com/josephflu/tableau_hammerhead.\n"
+    print_version()
 
 
 # Then hammerhead will
@@ -117,7 +129,7 @@ def start_up_questions():
         actionQ.quit: quit_installer,
         actionQ.install_ts: install_tableau_server,
         actionQ.modify: show_modify_menu,
-        actionQ.installprep: install_prep,
+        actionQ.install_prep: install_prep,
     }[actionQ.answer]()
     if actionQ.answer != actionQ.quit:
         print()
@@ -130,7 +142,7 @@ def show_modify_menu():
     actionQM.asking()
     {
         actionQM.main_menu: back_to_main_menu,
-        actionQM.changeregion: prompt_selected_region_and_save,
+        actionQM.change_region: prompt_selected_region_and_save,
         actionQM.report: report_server_instances.run,
         actionQM.start: modify_instance.start_tableau_server,
         actionQM.stop: modify_instance.stop_tableau_server,
@@ -173,37 +185,44 @@ def install_tableau_server():
         if bucket_name == prompts.S3BucketQuestion.createNewOption:
             bucket_name = aws_account_util.create_s3_bucket(region)
 
+        vpc_list = aws_account_util.get_vpc_list(region)
+        if not vpc_list:
+            print(Fore.RED + "No VPC created in the account: please create a VPC and subnets, then restart the CLI")
+            press_enter_to_continue()
+            return
+        vpc_id = prompts.VPCidQuestion().ask(vpc_list)
+
         instance_profiles_list = aws_account_util.get_instance_profile_list(region)
-        if instance_profiles_list:
+        if len(instance_profiles_list) > 0:
             instance_profile = prompts.InstanceProfileQuestion().ask(instance_profiles_list)
+            if instance_profile == prompts.InstanceProfileQuestion.createNewOption:
+                instance_profile_name = prompts.CreateInstanceProfileQuestion().ask()
+                instance_profile = aws_account_util.create_instance_profile(instance_profile_name, region, bucket_name)
         else:
             instance_profile_name = prompts.CreateInstanceProfileQuestion().ask()
             instance_profile = aws_account_util.create_instance_profile(instance_profile_name, region, bucket_name)
-    
+
         instance_type = prompts.PromptInstanceType().ask()
         key_name = prompts.Ec2KeyPairQuestion().ask(region)
-        security_group_ids_unparsed = prompts.SecurityGroupIdsQuestion().asking_with_param(region)
-        security_group_ids = []
-        for item in security_group_ids_unparsed:
-            security_group_ids.append(item.split(" | ")[0])
-        subnet_ids_unparsed = prompts.SubnetIdsQuestion().asking_with_param(region)
-        subnet_ids = []
-        for item in subnet_ids_unparsed:
-            subnet_ids.append(item.split(" | ")[0])
+
+        security_group_ids = prompts.SecurityGroupIdsQuestion().asking(region=region, vpc_id=vpc_id)
+        subnet_ids = prompts.SubnetIdsQuestion().asking(region=region, vpc_id=vpc_id)
 
         print("\n\n ========== Install Tableau Server STEP 2/3   Tableau Server Configuration")
         tas_admin_username = prompts.TasAdminUsernameQuestion().asking()
-        tas_admin_pass = prompts.TasAdminPassQuestion().asking_with_param(tas_admin_username)
+        tas_admin_pass = prompts.TasAdminPassQuestion().asking(username=tas_admin_username)
         tsVersionId = prompts.TasVersionIdQuestion().ask()
         operatingSystem = prompts.OperatingSystemQuestion().ask()
         authType = prompts.TasAuthenticationQuestion().ask()
         node_count = prompts.TasNodeCountQuestion().asking()
         tableau_license_key = prompts.TasLicenseKey().ask()
-        ret = pre_checks.check_license_format(tableau_license_key, node_count)
+        ret = pre_checks.check_license_format(tableau_license_key, int(node_count) > 1)
         if len(ret) > 0:
             print(f"warning, license key '{tableau_license_key}' is invalid. " + ret[0])
-        print()
-        yaml_file_name = prompts.AccountYamlFileNameQuestion().asking()
+            print()
+        accname = re.sub("[^A-Za-z0-9]", "", targetAccountName)
+        default_name = f"{prompts.AWS_OS_TYPES[operatingSystem]}-{node_count}node-{accname}.yaml"
+        yaml_file_name = prompts.AccountYamlFileNameQuestion().asking(filename=default_name)
 
         data = {
             "aws": {
@@ -283,7 +302,7 @@ def type_to_continue(msg):
     action = ''
 
     while not repeat:
-        action = prompts.ConfirmActionByTyping().asking_with_param(msg)
+        action = prompts.ConfirmActionByTyping().asking(confirm=msg)
         repeat = action or False
 
     if action == 'skip':

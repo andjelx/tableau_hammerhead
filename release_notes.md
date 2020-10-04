@@ -1,8 +1,23 @@
 # Tableau Hammerhead CLI - Release Notes
 
-Sep 29 2020
+verison 0.9.0
 
+- Add VPC selection
+- Improve pre-checks
+- Batch mode updated
+
+version 0.8.0        
+
+- Update batch installation
+- **setup_python/requirements.txt has been updated - please re-apply to update python module dependencies**
+- Show Creator tag on EC2 actions (stop/start/reboot/terminate)
+- Latest version check implemented
+- released on Oct 3 2020
+
+
+version 0.7.0
 - Added possibility to run config verification and batch installation from CLI
+- released on Sep 29 2020
 
 Sep 27 2020
 

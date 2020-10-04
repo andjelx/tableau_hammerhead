@@ -47,14 +47,17 @@ def translated_cli_config_to_account_config(config_yaml, file_name):
 
 
 def check_latest_version(__version__: str) -> str:
+    """
+    Check github.com/josephflu/tableau_hammerhead for latest released version of hammerhead cli
+    return False if unable to get version
+    return message containing version or reason for failure
+    """
     VERSION_URL = "https://raw.githubusercontent.com/josephflu/tableau_hammerhead/master/src/cli/__init__.py"
     req = requests.get(VERSION_URL)
     if not req.status_code == 200:
-        print(Fore.RED + "Can't get latest version")
-        return
+        return False, f"Can't get latest version. status code {req.status_code}"
 
     match = re.findall('^__version__\s*=\s*["\'](\d+\.\d+.\d+)["\']', req.text)
-    if match:
-        return match[0]
-
-    return
+    if not match:
+        return False, "regex match didn't find version"
+    return True, match[0]

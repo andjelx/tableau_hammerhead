@@ -10,7 +10,7 @@ import yaml
 from typing import Dict, List, Optional
 
 from ..include import aws_sts
-from . import aws_check
+from . import aws_check, utils
 
 AWS_CREDENTIALS_FILE_PATH = pathlib.Path.home() / ".aws" / "credentials"
 SELECTED_REGION_CONFIG = pathlib.Path(__file__).parent.parent / "config" / "selected_region.yaml"
@@ -68,13 +68,13 @@ def get_ec2_instances(instance_state, region):
             EC2_HAMMERHEAD_FILTER
         ])
     for instance in instances:
-        instance_name = ""
-        for tag in instance.tags:
-            if tag["Key"] == 'Name':
-                instance_name = f"  {tag['Value']}"
+        tags = utils.convert_tags(instance.tags)
+        instance_name = f"  {tags.get('Name','')}"
+        instance_creator = f"  creator:{tags.get('Creator','')}"
+
         instance_list.append({
             "value": instance.id,
-            "title": f"{instance.id}{instance_name}  type:{instance.instance_type}  state:{instance_state}"
+            "title": f"{instance.id}{instance_name}{instance_creator} type:{instance.instance_type}  state:{instance_state}"
         })
     return instance_list
 
@@ -160,24 +160,18 @@ def get_key_pair_list(region: str):
     return [key_pair["KeyName"] for key_pair in key_pair_list.get("KeyPairs")]
 
 
-def get_available_security_groups(region: str):
-    security_groups = boto3.client('ec2', region_name=region).describe_security_groups()
-    security_group_list = security_groups.get("SecurityGroups")
-    security_group_all = []
-    for item in security_group_list:
-        security_group_all.append(item["GroupId"] + " | " + item["GroupName"])
-    return security_group_all
-    # return [security_group["GroupId"] for security_group in security_group_list]
+def get_available_security_groups(region: str, vpc_id: str) -> list:
+    client = boto3.client('ec2', region_name=region)
+    security_groups = client.describe_security_groups(Filters=[{ 'Name': 'vpc-id', 'Values': [vpc_id]}])
+
+    return security_groups.get("SecurityGroups")
 
 
-def get_available_subnets(region: str):
-    subnets = boto3.client('ec2', region_name=region).describe_subnets()
-    subnets_list = subnets.get("Subnets")
-    subnet_list_all = []
-    for item in subnets_list:
-        tag_value = " | " + item["Tags"][0]["Value"] if item.get("Tags") else ""
-        subnet_list_all.append(f"{item['SubnetId']}{tag_value}")
-    return subnet_list_all
+def get_available_subnets(region: str, vpc_id: str) -> list:
+    client = boto3.client('ec2', region_name=region)
+    subnets = client.describe_subnets(Filters=[{ 'Name': 'vpc-id', 'Values': [vpc_id]}])
+
+    return subnets.get("Subnets")
 
 
 def set_selected_region(region: str):
@@ -304,3 +298,11 @@ def create_instance_profile(name: str, region: str, bucket_name: str) -> str:
     )
 
     return instance_profile_name
+
+
+def get_vpc_list(region: str) -> list:
+    vpc_list = boto3.client("ec2", region_name=region).describe_vpcs()
+    if not vpc_list:
+        return list()
+
+    return [vpc["VpcId"] for vpc in vpc_list.get("Vpcs")]

@@ -4,6 +4,7 @@ import re
 import requests
 import os
 
+from colorama import Fore
 from prompt_toolkit.validation import Validator
 
 from . import aws_account_util, config_file_util, pre_checks
@@ -21,18 +22,22 @@ custom_style = Style([
     ("text", ""),
 ])
 
+AWS_OS_TYPES = {
+    "AmazonLinux2": "linux",
+    "AmazonWindows2019": "windows"
+}
+
 CancelAnswer = questionary.Choice(title="Cancel")
 
 
 class Question:
     answer: str = None
-    param: str = None
+    params: dict = None
 
-    def asking_with_param(self, param):   #FutureDev: find a better solution for passing in parameters so we don't have to have 2 methods
-        self.param = param
-        return self.asking()
+    def asking(self, **kwargs):
+        if kwargs:
+            self.params = kwargs
 
-    def asking(self):
         self.ask()
         while not self.validate_and_print():
             self.ask()
@@ -50,7 +55,7 @@ class ActionQuestion(Question):
     quit = "Quit"
     install_ts = "Install Tableau Server"
     modify = "Modify Instance"
-    installprep = "Install Tableau Prep Builder"
+    install_prep = "Install Tableau Prep Builder"
 
     def ask(self):
         self.answer = questionary.select(
@@ -58,7 +63,6 @@ class ActionQuestion(Question):
             choices=[
                 self.quit,
                 self.install_ts,
-                # self.report,
                 self.modify,
 #                "Install Tableau Desktop *",
 #                self.installprep,
@@ -81,25 +85,20 @@ class ModifyActionQuestion(Question):
     reboot = "Reboot Instance"
     terminate = "Terminate Instance"
     report = "Report Instances"
-    changeregion = "Change Selected Region"
+    change_region = "Change Selected Region"
 
     def ask(self):
         self.answer = questionary.select(
             "Modify Action?",
             choices=[
                 self.main_menu,
-                self.changeregion,
                 self.report,
                 self.start,
                 self.stop,
                 self.reboot,
                 self.terminate,
-                questionary.Choice(title="Upgrade Tableau Server", disabled="is not yet supported"),
-                # "Get Password *",
-                # "Attach 1TB Drive *",
-                # "Attach 2TB Drive *",
-                # "Create Snapshot *",
-                # "Apply Snapshot *",
+                self.change_region,
+                questionary.Choice(title="Upgrade Tableau Server", disabled="not yet supported"),
             ],
             style=custom_style).ask()
         return self.answer
@@ -216,6 +215,7 @@ class AccountYamlFileNameQuestion(Question):
     def ask(self):
         self.answer = questionary.text(
             "Hammerhead configuration filename?",
+            default=self.params['filename'],
             style=custom_style
         ).ask()
         if not self.answer.lower().endswith(".yaml"):
@@ -224,12 +224,21 @@ class AccountYamlFileNameQuestion(Question):
 
     def validate(self):
         account_dir_path = pathlib.Path(__file__).parent.parent / config_file_util.CLI_CONFIG_PATH
-        new_account_path = account_dir_path / self.answer
+        new_account_path = str(account_dir_path / self.answer)
         pattern = r"^.+\.yaml$"
         if not re.fullmatch(pattern, self.answer):
-            return "filename does not end with .yaml"
+            return Fore.RED + "Filename does not end with .yaml"
+
+        # If file exists try new name with index at the end
         if os.path.exists(str(new_account_path)):
-            return f"file already exists at '{new_account_path}'"
+            _index = 1
+            _basename, _ext = os.path.splitext(os.path.basename(new_account_path))
+            while True:
+                new_account_path = f"{_basename}-{_index}{_ext}"
+                if not os.path.exists(new_account_path):
+                    self.params['filename'] = new_account_path
+                    return Fore.RED + f"File already exists. Try with suggested name?"
+                _index += 1
         return None
 
 
@@ -269,7 +278,11 @@ class S3BucketQuestion(Question):
 
 
 class InstanceProfileQuestion(Question):
+    createNewOption = "Create new Instance Profile"
+
     def ask(self, instance_profiles: list):
+        instance_profiles.append(self.createNewOption)
+
         self.answer = questionary.select(
             "Which IAM Instance Profile? (Maps IAM Role to EC2 instance)",
             choices=instance_profiles,
@@ -308,10 +321,17 @@ class Ec2KeyPairQuestion(Question):
 
 class SecurityGroupIdsQuestion(Question):  # FutureDev: show display name of security groups
     def ask(self):
-        region = self.param
+        region = self.params['region']
+        vpc_id = self.params['vpc_id']
+
+        sg_choices = [
+            questionary.Choice(title=s["GroupId"] + " | " + s["GroupName"], value=s["GroupId"])
+            for s in aws_account_util.get_available_security_groups(region, vpc_id)
+        ]
+
         self.answer = questionary.checkbox(
             "Which Security Group ID(s)?",
-            choices=aws_account_util.get_available_security_groups(region),
+            choices=sg_choices,
             style=custom_style).ask()
         return self.answer
 
@@ -321,17 +341,24 @@ class SecurityGroupIdsQuestion(Question):  # FutureDev: show display name of sec
         return None
 
 
-class SubnetIdsQuestion(Question):  # FutureDev: show display name of subnets and VPCs
+class SubnetIdsQuestion(Question):
     no_subnets = "No subnets available"
 
     def ask(self):
-        region = self.param
-        subnets = aws_account_util.get_available_subnets(region)
-        if len(subnets) == 0:
-            subnets = [self.no_subnets]
+        region = self.params['region']
+        vpc_id = self.params['vpc_id']
+
+        subnets_choices = []
+        for item in aws_account_util.get_available_subnets(region, vpc_id):
+            tag_value = " | " + item["Tags"][0]["Value"] if item.get("Tags") else ""
+            subnets_choices.append(questionary.Choice(title=f"{item['SubnetId']}{tag_value}", value=item['SubnetId']))
+
+        if not subnets_choices:
+            subnets_choices = [self.no_subnets]
+
         self.answer = questionary.checkbox(
             "Which Subnet ID(s)?",
-            choices=subnets,
+            choices=subnets_choices,
             style=custom_style).ask()
         return self.answer
 
@@ -367,9 +394,9 @@ class TasAdminPassQuestion(Question):
         # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements
         pattern = '(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}'
         if self.answer is None \
-                or self.param.upper() in self.answer.upper() \
+                or self.params['username'].upper() in self.answer.upper() \
                 or not re.match(pattern, self.answer):
-            return f"Please enter a valid password. It should be 8+ symbols. "\
+            return f"Please enter a valid password. It should be 8+ symbols. " \
                    "Contains: one upper, one lowercase and number. " \
                    f"And doesn't contain your username."
         return None
@@ -397,10 +424,7 @@ class OperatingSystemQuestion(Question):
     def ask(self):
         self.answer = questionary.select(
             "Operating system?",
-            choices=[
-                "AmazonLinux2",
-                "AmazonWindows2019",
-            ],
+            choices=AWS_OS_TYPES,
             style=custom_style).ask()
         return self.answer
 
@@ -442,7 +466,7 @@ class TasLicenseKey(Question):
 class ConfirmActionByTyping(Question):
     def ask(self):
         self.answer = questionary.text(
-            f"Please type '{self.param}' to continue, or 'skip' to skip",
+            f"Please type '" + self.params["confirm"] + "' to continue, or 'skip' to skip",
             style=custom_style).ask()
         return self.answer
 
@@ -450,8 +474,8 @@ class ConfirmActionByTyping(Question):
         if self.answer == 'skip':
             return None
 
-        if self.answer is None or self.answer != self.param:
-            return f"Please type '{self.param}' to continue, or 'skip' to skip"
+        if self.answer is None or self.answer != self.params["confirm"]:
+            return f"Please type '" + self.params["confirm"] + "' to continue, or 'skip' to skip"
         return None
 
 
@@ -464,5 +488,14 @@ class PromptInstanceType(Question):
                 questionary.Choice(title="r5a.2xlarge |  8 CPU, 64Gb", value="r5a.2xlarge"),
                 questionary.Choice(title="r5a.4xlarge | 16 CPU, 128Gb", value="r5a.4xlarge"),
             ],
+            style=custom_style).ask()
+        return self.answer
+
+
+class VPCidQuestion(Question):
+    def ask(self, vpcs: list):
+        self.answer = questionary.select(
+            "Choose AWS VPC to place the servers?",
+            choices=vpcs,
             style=custom_style).ask()
         return self.answer

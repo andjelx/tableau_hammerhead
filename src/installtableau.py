@@ -546,14 +546,16 @@ def createUpgradeUninstallRemoteCommand(reqModel, instanceId, node):
 
 
 def write_hammerhead_info(instance_ids, os_type: str, aws: models.AwsSettings):
-    ssm_command = awsutil2.SsmCommand("", os_type, [], "")
-    ssm_command.commands = awsutil2.readCommandFile("tsm-write-info.ps1" if os_type == osutil.OSTypeEnum.windows else "tsm-write-info.sh")
-    ssm_command.executionTimeoutMinutes = 10
-    for instanceId in instance_ids:
-        ssm_command.instanceId = instanceId
-        ssm_command.displayName = f"Write hammerhead_info.txt file on node {instanceId}"
-        awsutil2.executeSsmCommand(ssm_command, aws.targetAccountRole, aws.region)
-
+    try:
+        ssm_command = awsutil2.SsmCommand("", os_type, [], "")
+        ssm_command.commands = awsutil2.readCommandFile("tsm-write-info.ps1" if os_type == osutil.OSTypeEnum.windows else "tsm-write-info.sh")
+        ssm_command.executionTimeoutMinutes = 10
+        for instanceId in instance_ids:
+            ssm_command.instanceId = instanceId
+            ssm_command.displayName = f"Write hammerhead_info.txt file on node {instanceId}"
+            awsutil2.executeSsmCommand(ssm_command, aws.targetAccountRole, aws.region)
+    except Exception as ex:
+        print(f'unable to install chrome ' + ex)
 
 # if __name__ == "__main__":
 #     rm = createinstance_getsettings.loadReqModel()
