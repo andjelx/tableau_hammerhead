@@ -305,4 +305,4 @@ def get_vpc_list(region: str) -> list:
     if not vpc_list:
         return list()
 
-    return [vpc["VpcId"] for vpc in vpc_list.get("Vpcs")]
+    return vpc_list.get("Vpcs")

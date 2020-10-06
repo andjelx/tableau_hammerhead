@@ -7,7 +7,7 @@ import os
 from colorama import Fore
 from prompt_toolkit.validation import Validator
 
-from . import aws_account_util, config_file_util, pre_checks
+from . import aws_account_util, config_file_util, pre_checks, utils
 from prompt_toolkit.styles import Style
 
 custom_style = Style([
@@ -494,8 +494,19 @@ class PromptInstanceType(Question):
 
 class VPCidQuestion(Question):
     def ask(self, vpcs: list):
+        vpc_choices = []
+        for v in vpcs:
+            tags = utils.convert_tags(v.get("tags"))
+            vpc_name = "default" if v['IsDefault'] else tags.get('Name', '-')
+            qc = questionary.Choice(title=f"{v['VpcId']} | {vpc_name}", value=v['VpcId'])
+
+            if v['IsDefault']:
+                vpc_choices.insert(0, qc)
+            else:
+                vpc_choices.append(qc)
+
         self.answer = questionary.select(
             "Choose AWS VPC to place the servers?",
-            choices=vpcs,
+            choices=vpc_choices,
             style=custom_style).ask()
         return self.answer
