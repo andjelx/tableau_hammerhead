@@ -112,14 +112,17 @@ class ModifyActionQuestion(Question):
 class NewOrExistingConfigQuestion(Question):
     create_new_account_config_file = "Create new"
     choose_existing = "Choose existing"
+    cancel = "Cancel"
 
     def ask(self):
+        numConfigFiles = len(config_file_util.get_existing_config_files())
+        choices = [self.create_new_account_config_file, self.cancel]
+        if numConfigFiles > 0:
+            choices.insert(0, self.choose_existing)
+
         self.answer = questionary.select(
             "Create new Hammerhead configuration file or select existing?",
-            choices=[
-                self.create_new_account_config_file,
-                self.choose_existing,
-            ],
+            choices=choices,
             style=custom_style
         ).ask()
         return self.answer
@@ -496,8 +499,8 @@ class VPCidQuestion(Question):
     def ask(self, vpcs: list):
         vpc_choices = []
         for v in vpcs:
-            tags = utils.convert_tags(v.get("tags"))
-            vpc_name = "default" if v['IsDefault'] else tags.get('Name', '-')
+            tags = utils.convert_tags(v.get("Tags"))
+            vpc_name = tags.get('Name', '') + (" (default)" if v['IsDefault'] else "") 
             qc = questionary.Choice(title=f"{v['VpcId']} | {vpc_name}", value=v['VpcId'])
 
             if v['IsDefault']:

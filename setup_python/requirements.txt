@@ -10,7 +10,7 @@ botocore
 questionary==1.5.2
 prompt_toolkit
 pyyaml
-requests
+requests>=2.16.0
 colorama
 packaging
 

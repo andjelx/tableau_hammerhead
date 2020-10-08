@@ -164,14 +164,13 @@ def install_tableau_server():
         return
 
     # STEP - Install Tableau Server
-    numConfigFiles = len(config_file_util.get_existing_config_files())
-    qNewOrExisting = prompts.NewOrExistingConfigQuestion()
-    if numConfigFiles > 0:
-        answer = qNewOrExisting.ask()
+    answer = prompts.NewOrExistingConfigQuestion().ask()
+    if answer == prompts.NewOrExistingConfigQuestion().cancel:
+        return
+    elif answer == prompts.NewOrExistingConfigQuestion().choose_existing:
+        yaml_file_name = prompts.ChoseExistingYamlFileQuestion().ask()
     else:
-        answer = qNewOrExisting.create_new_account_config_file
-
-    if answer == qNewOrExisting.create_new_account_config_file:
+        #  Create new account
         # platform = prompts.PlatformQuestion().asking()
 
         print("\n\n ========== Install Tableau Server STEP 1/3   EC2 Configuration")
@@ -259,9 +258,8 @@ def install_tableau_server():
 
         print(f"configuration file saved as src/{config_file_util.CLI_CONFIG_PATH}/{yaml_file_name}")
         print("\n\n ========== Install Tableau Server STEP 3/3   Confirm")
-    else:
-        yaml_file_name = prompts.ChoseExistingYamlFileQuestion().ask()
 
+    # Confirm and start install
     confirm_and_start_install(yaml_file_name)
 
 

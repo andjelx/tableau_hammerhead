@@ -4,6 +4,8 @@ import re
 import requests
 import yaml
 import os
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from colorama import Fore
 
@@ -53,7 +55,7 @@ def check_latest_version(__version__: str) -> str:
     return message containing version or reason for failure
     """
     VERSION_URL = "https://raw.githubusercontent.com/josephflu/tableau_hammerhead/master/src/cli/__init__.py"
-    req = requests.get(VERSION_URL)
+    req = requests.get(VERSION_URL, verify=False)
     if not req.status_code == 200:
         return False, f"Can't get latest version. status code {req.status_code}"
 

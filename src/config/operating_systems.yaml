@@ -12,7 +12,7 @@ OperatingSystems:
   AmazonWindows2019:
     AMI:
       us-west-2: ami-029e27fb2fc8ce9d8
-      us-east-1: ami-04a0ee204b44cc91a
+      us-east-1: ami-0eb7fbcc77e5e6ec6
       us-east-2: ami-0239d3998515e9ed1
     DeviceName: "/dev/sda1"
     Type: windows

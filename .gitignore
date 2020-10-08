@@ -44,6 +44,9 @@ README.html
 # python compiled files
 *.pyc
 
+#mac
+.DS_Store
+
 #### hammerhead pipeline ####
 artifacts
 env.list
