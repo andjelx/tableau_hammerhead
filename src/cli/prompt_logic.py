@@ -1,4 +1,7 @@
+from .utils import print
 import pathlib
+import sys
+
 import questionary
 import os
 import re
@@ -10,6 +13,9 @@ from . import kick_off_hammerhead, aws_account_util, prompts, config_file_util, 
     modify_instance, aws_check, pre_checks, __version__
 
 from .pre_checks import do_prechecks
+
+# set_logging()
+
 
 def print_version():
     try:
@@ -146,7 +152,7 @@ def show_modify_menu():
         actionQM.report: report_server_instances.run,
         actionQM.start: modify_instance.start_tableau_server,
         actionQM.stop: modify_instance.stop_tableau_server,
-        actionQM.reboot: modify_instance.reboot_tableau_server,
+        # actionQM.reboot: modify_instance.reboot_tableau_server,
         actionQM.terminate: modify_instance.terminate_tableau_server,
     }[actionQM.answer]()
     if actionQM.answer != actionQM.main_menu:

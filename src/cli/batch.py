@@ -1,3 +1,4 @@
+from .utils import print
 import os
 import pathlib
 import sys
@@ -54,6 +55,3 @@ def process_batch(actions, args):
     else:
         print(f"Provide an action: {' | '.join(actions)}")
         sys.exit(1)
-
-    # No errors
-    # sys.exit()

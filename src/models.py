@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 #
 
+from .cli.utils import print
+
 from dataclasses import dataclass
 from .include import configutil
 

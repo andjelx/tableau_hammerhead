@@ -1,7 +1,7 @@
 import colorama
 import argparse
 
-from . import prompt_logic
+from . import prompt_logic, aws_account_util
 from . import batch
 
 # Init color support for Windows console

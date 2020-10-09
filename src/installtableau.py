@@ -1,3 +1,4 @@
+from .cli.utils import print
 import decimal
 import os
 
@@ -386,14 +387,13 @@ def createAfterConfigureNodes(reqModel):
     return commands
 
 
-def createTerminate(modifyModel: models.ModifyInstanceModel):
-    tsVersionId = modifyModel.tsVersionId
-    if modifyModel.operatingSystemType == osutil.OSTypeEnum.linux:
+def createTerminate(os_type: str, ts_version_id: str):
+    if os_type == osutil.OSTypeEnum.linux:
         commands = [
             f'/TableauSetup/tsm-terminate.sh'
         ]
-    elif modifyModel.operatingSystemType == 'windows':
-        if tsm_version.is_release(tsVersionId) and tsm_version.get_decimal(tsVersionId) < decimal.Decimal('2018.2'):
+    elif os_type == 'windows':
+        if tsm_version.is_release(ts_version_id) and tsm_version.get_decimal(ts_version_id) < decimal.Decimal('2018.2'):
             commands = [
                 f'. c:/TableauSetup/include.ps1',
                 f'C:/TableauSetup/tab-terminate.ps1',

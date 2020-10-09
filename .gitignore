@@ -75,3 +75,4 @@ src/config/accounts/*
 src/config/defaultconfig.yaml
 
 /src/config/selected_region.yaml
+log/

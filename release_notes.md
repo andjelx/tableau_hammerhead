@@ -2,6 +2,8 @@
 
 verison 0.9.0
 
+- Add latest AMI use
+- Add log writing to log/ subdir
 - Add VPC selection
 - Improve pre-checks
 - Batch mode updated

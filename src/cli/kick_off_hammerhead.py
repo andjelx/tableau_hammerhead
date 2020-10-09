@@ -1,3 +1,4 @@
+from .utils import print
 import os
 
 from .. import createinstance, createinstance_getsettings, installtableau  #, createprep

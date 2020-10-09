@@ -1,3 +1,4 @@
+from .utils import print
 import json
 import re
 import os
@@ -8,9 +9,13 @@ import uuid
 import tempfile
 import yaml
 from typing import Dict, List, Optional
+from colorama import Fore
 
-from ..include import aws_sts
+from ..include import aws_sts,awsutil2
 from . import aws_check, utils
+from .. import installtableau
+from pprint import pprint
+
 
 AWS_CREDENTIALS_FILE_PATH = pathlib.Path.home() / ".aws" / "credentials"
 SELECTED_REGION_CONFIG = pathlib.Path(__file__).parent.parent / "config" / "selected_region.yaml"
@@ -57,10 +62,10 @@ def count_hammerhead_ec2_instances(region):
     return len(list(ec2.instances.filter(Filters=[EC2_HAMMERHEAD_FILTER])))
 
 
-def get_ec2_instances(instance_state, region):
+def get_ec2_instances(instance_states: list, region):
     ec2 = boto3.resource('ec2', region_name=region)
     instance_list = []
-    instance_state_filter = {'Name': 'instance-state-name', 'Values': [instance_state]} if instance_state else {}
+    instance_state_filter = {'Name': 'instance-state-name', 'Values': instance_states} if instance_states else {}
 
     instances = ec2.instances.filter(
         Filters=[
@@ -71,6 +76,7 @@ def get_ec2_instances(instance_state, region):
         tags = utils.convert_tags(instance.tags)
         instance_name = f"  {tags.get('Name','')}"
         instance_creator = f"  creator:{tags.get('Creator','')}"
+        instance_state = instance.state["Name"]
 
         instance_list.append({
             "value": instance.id,
@@ -306,3 +312,59 @@ def get_vpc_list(region: str) -> list:
         return list()
 
     return vpc_list.get("Vpcs")
+
+
+def unlicense_tableau_server(instance_id: str, region: str):
+    try:
+        print("execute command to deactivate Tableau Server license (and make sure instance is running)")
+        ec2 = boto3.client("ec2", region_name=region)
+        instances = ec2.describe_instances(InstanceIds=[instance_id])
+        if not instances["Reservations"][0]["Instances"]:
+            print(Fore.RED + f'Instance not found')
+            return
+
+        instance = instances["Reservations"][0]["Instances"][0]
+        tags = utils.convert_tags(instance.get("Tags"))
+
+        # Assuming the instance already have the scripts untouched from installation phase
+        # installtableau.uploadScripts(modifyModel.configSelection, tags['OperatingSystemType'], stackId)
+
+        target_account_role = None
+        if not instance["State"]["Name"] in ["running", "terminated", "pending"]:
+            start_instance(instance_id, region)  # make sure instances are started so we can deactivate license
+
+        commands = installtableau.createTerminate(tags['OperatingSystemType'], tags['TableauServerVersion'])
+        ssmCommand = awsutil2.SsmCommand(instance_id, tags['OperatingSystemType'], commands)
+        ssmCommand.displayName = "Deactivate Tableau Server License"
+        ssmCommand.executionTimeoutMinutes = 5
+
+        awsutil2.executeSsmCommand(ssmCommand, target_account_role, region)
+        print(Fore.GREEN + f'License on server was deactivated')
+    except Exception as termEx:
+        print(Fore.RED+ f'warning: failed to deactivate tableau server license before terminating EC2\n{termEx}')
+
+
+def get_latest_ami(os_type: str, region: str) -> str:
+    """
+    Return latest available AMI for certain os_type linux | windows in region
+    https://aws.amazon.com/blogs/mt/query-for-the-latest-windows-ami-using-systems-manager-parameter-store/s
+    """
+    os_ssm_ami_map = {
+        "AmazonLinux2": "/aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-gp2",
+        "AmazonWindows2019": "/aws/service/ami-windows-latest/Windows_Server-2019-English-Full-Base"
+    }
+
+    ssm_client = boto3.client('ssm', region_name=region)
+    param_path = "/".join(os_ssm_ami_map[os_type].split("/")[:-1])
+    ssm_params_with_values = ssm_client.get_parameters_by_path(Path=param_path)
+    next_token = ssm_params_with_values.get('NextToken')
+
+    while next_token:
+        for p in ssm_params_with_values['Parameters']:
+            if p['Name'] == os_ssm_ami_map[os_type]:
+                return p['Value']
+        if next_token:
+            ssm_params_with_values = ssm_client.get_parameters_by_path(Path=param_path, NextToken=next_token)
+            next_token = ssm_params_with_values.get('NextToken')
+
+    return ""

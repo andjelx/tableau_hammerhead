@@ -1,3 +1,5 @@
+from .utils import print
+
 import questionary
 import pathlib
 import re
@@ -128,9 +130,9 @@ class NewOrExistingConfigQuestion(Question):
         return self.answer
 
 
-def _fill_up_instances_choices(state, region):
+def _fill_up_instances_choices(states: list, region):
     choices_list = [questionary.Choice(title=i['title'], value=i['value']) for i in
-                    aws_account_util.get_ec2_instances(state, region)]
+                    aws_account_util.get_ec2_instances(states, region)]
     if choices_list:
         choices_list.append(CancelAnswer)
     return choices_list
@@ -141,7 +143,7 @@ class StartEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = _fill_up_instances_choices("stopped", region)
+        choices_list = _fill_up_instances_choices(["stopped"], region)
         if not choices_list:
             return self.NoStoppedInstances
 
@@ -157,7 +159,7 @@ class StopEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = _fill_up_instances_choices("running", region)
+        choices_list = _fill_up_instances_choices(["running"], region)
         if not choices_list:
             return self.NoStartedInstances
 
@@ -173,7 +175,7 @@ class RebootEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = _fill_up_instances_choices(None, region)
+        choices_list = _fill_up_instances_choices(["running"], region)
         if not choices_list:
             return self.NoInstances
 
@@ -189,7 +191,7 @@ class TerminateEC2Instance(Question):
 
     def ask(self, region):
         print(f"query instances in region {region} ...")
-        choices_list = _fill_up_instances_choices(None, region)
+        choices_list = _fill_up_instances_choices(["stopped", "running"], region)
         if not choices_list:
             return self.NoInstances
 

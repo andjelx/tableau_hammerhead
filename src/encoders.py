@@ -1,3 +1,4 @@
+from .cli.utils import print
 from json import JSONEncoder
 from src import models
 

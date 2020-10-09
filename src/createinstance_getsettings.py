@@ -1,3 +1,5 @@
+from .cli import aws_account_util
+from .cli.utils import print
 import datetime
 import json
 import os
@@ -75,7 +77,7 @@ def validate_model(reqModel: models.ReqModel):
         mapConfigOS = yaml.load(f, Loader=yaml.FullLoader)
 
     reqModel.ec2.operatingSystemType = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['Type']
-    reqModel.ec2.baseImage = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['AMI'][reqModel.aws.region]  # get ami ID for target region
+    reqModel.ec2.baseImage = aws_account_util.get_latest_ami(reqModel.ec2.operatingSystem, reqModel.aws.region)
     reqModel.ec2.deviceName = mapConfigOS['OperatingSystems'][reqModel.ec2.operatingSystem]['DeviceName']
     aws_spot.setSpotEnabled(reqModel)
     if reqModel.tableau is None:

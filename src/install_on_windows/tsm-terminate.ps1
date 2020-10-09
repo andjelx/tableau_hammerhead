@@ -20,9 +20,13 @@ Write-Output 'login'
 tsm login --username $TAS_AdminUsername --password $TAS_AdminPassword
 CheckLastExitCode
 
-Write-Output 'deactivate license'
-tsm licenses deactivate --license-key $TAS_License
-CheckLastExitCode
+if ($null -ne $TAS_License -And $TAS_License -ne "")
+{
+    Write-Output 'deactivate license'
+    tsm licenses deactivate --license-key $TAS_License
+    CheckLastExitCode
+}
+
 } catch {
     Write-Output $_
     exit 1

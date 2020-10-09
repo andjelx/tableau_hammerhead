@@ -1,3 +1,4 @@
+from .utils import print
 from . import prompt_logic, prompts, aws_account_util
 
 
@@ -6,7 +7,7 @@ def start_tableau_server():
     answer = prompts.StartEC2Instance().ask(region)
     if answer == prompts.StartEC2Instance.NoStoppedInstances:
         ec2_count = aws_account_util.count_hammerhead_ec2_instances(region)
-        print(f"Unable to stop instances, none of the {ec2_count} Hammerhead EC2 instances are stopped (tag:Pipeline = ProjectHammerhead)")
+        print(f"Unable to start instances, none of the {ec2_count} Hammerhead EC2 instances are stopped (tag:Pipeline = ProjectHammerhead and state=stopped)")
         prompt_logic.press_enter_to_continue()
     elif answer == prompts.CancelAnswer.title:
         print("User Cancelled")
@@ -20,7 +21,7 @@ def stop_tableau_server():
     answer = prompts.StopEC2Instance().ask(region)
     if answer == prompts.StopEC2Instance.NoStartedInstances:
         ec2_count = aws_account_util.count_hammerhead_ec2_instances(region)
-        print(f"Unable to stop instances, none of the {ec2_count} Hammerhead EC2 instances are running (tag:Pipeline = ProjectHammerhead)")
+        print(f"Unable to stop instances, none of the {ec2_count} Hammerhead EC2 instances are running (tag:Pipeline = ProjectHammerhead and state=running)")
         prompt_logic.press_enter_to_continue()
     elif answer == prompts.CancelAnswer.title:
         print("User Cancelled")
@@ -34,7 +35,7 @@ def reboot_tableau_server():
     answer = prompts.RebootEC2Instance().ask(region)
     if answer == prompts.RebootEC2Instance.NoInstances:
         ec2_count = aws_account_util.count_hammerhead_ec2_instances(region)
-        print(f"Unable to reboot instances, none of the {ec2_count} Hammerhead EC2 instances are running (tag:Pipeline = ProjectHammerhead)")
+        print(f"Unable to reboot instances, none of the {ec2_count} Hammerhead EC2 instances are running (tag:Pipeline = ProjectHammerhead and state=running)")
         prompt_logic.press_enter_to_continue()
     elif answer == prompts.CancelAnswer.title:
         print("User Cancelled")
@@ -44,7 +45,6 @@ def reboot_tableau_server():
 
 
 def terminate_tableau_server():
-    # TODO: unlicense Tableau Server before terminating
     region = prompt_logic.get_selected_region_or_prompt()
     answer = prompts.TerminateEC2Instance().ask(region)
     if answer == prompts.TerminateEC2Instance.NoInstances:
@@ -54,5 +54,6 @@ def terminate_tableau_server():
         print("user Cancelled")
     else:
         if prompt_logic.type_to_continue("terminate"):
+            aws_account_util.unlicense_tableau_server(answer, region)
             aws_account_util.terminate_instance(answer, region)
         prompt_logic.press_enter_to_continue()

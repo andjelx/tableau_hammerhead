@@ -7,5 +7,7 @@ source ./parameters.sh
 source ./include.sh
 tsm_login
 
-echo 'deactivate license'
-tsm licenses deactivate --license-key $TAS_License
+if [ -n "$TAS_License" ]; then
+  echo 'deactivate license'
+  tsm licenses deactivate --license-key "$TAS_License"
+fi
