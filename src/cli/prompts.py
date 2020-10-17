@@ -66,9 +66,9 @@ class ActionQuestion(Question):
                 self.quit,
                 self.install_ts,
                 self.modify,
-#                "Install Tableau Desktop *",
-#                self.installprep,
-#                "Install Tableau Resource Monitoring Tool *"
+                #                "Install Tableau Desktop *",
+                #                self.installprep,
+                #                "Install Tableau Resource Monitoring Tool *"
             ],
             style=custom_style).ask()
         return self.answer
@@ -386,6 +386,13 @@ class TasAdminUsernameQuestion(Question):
         return None
 
 
+def _password_check(password: str) -> bool:
+    # Returns True if not compliant
+    patterns = ['.*[0-9]+', '.*[a-z]+', '.*[A-Z]+', '^[^\$&]+$']
+    patterns_check = [re.match(p, password) for p in patterns]
+    return len(password) < 8 or patterns_check.count(None) != 0
+
+
 class TasAdminPassQuestion(Question):
 
     def ask(self):
@@ -397,13 +404,12 @@ class TasAdminPassQuestion(Question):
     def validate(self):
         # This require to pass Windows server password policy
         # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements
-        pattern = '(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}'
-        if self.answer is None \
-                or self.params['username'].upper() in self.answer.upper() \
-                or not re.match(pattern, self.answer):
+
+        if self.answer is None or self.params['username'].upper() in self.answer.upper() \
+                or _password_check(self.answer):
             return f"Please enter a valid password. It should be 8+ symbols. " \
                    "Contains: one upper, one lowercase and number. " \
-                   f"And doesn't contain your username."
+                   f"And doesn't contain your username or $ and & symbols (may cause issue with PowerShell scripts)"
         return None
 
 
@@ -502,7 +508,7 @@ class VPCidQuestion(Question):
         vpc_choices = []
         for v in vpcs:
             tags = utils.convert_tags(v.get("Tags"))
-            vpc_name = tags.get('Name', '') + (" (default)" if v['IsDefault'] else "") 
+            vpc_name = tags.get('Name', '') + (" (default)" if v['IsDefault'] else "")
             qc = questionary.Choice(title=f"{v['VpcId']} | {vpc_name}", value=v['VpcId'])
 
             if v['IsDefault']:

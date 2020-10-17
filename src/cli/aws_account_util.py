@@ -344,25 +344,28 @@ def unlicense_tableau_server(instance_id: str, region: str):
         print(Fore.RED+ f'warning: failed to deactivate tableau server license before terminating EC2\n{termEx}')
 
 
-def get_latest_ami(os_type: str, region: str) -> str:
+def get_latest_ami(ami_name: str, region: str) -> str:
+    #FutureDev: make this method more efficient with a filter, rather than looking through every ami. for example: https://stackoverflow.com/questions/51611411/get-latest-ami-id-for-aws-instance
     """
-    Return latest available AMI for certain os_type linux | windows in region
+    Return latest available AMI for certain ami_name in region
     https://aws.amazon.com/blogs/mt/query-for-the-latest-windows-ami-using-systems-manager-parameter-store/s
     """
     os_ssm_ami_map = {
-        "AmazonLinux2": "/aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-gp2",
+        "AmazonLinux2": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2",
         "AmazonWindows2019": "/aws/service/ami-windows-latest/Windows_Server-2019-English-Full-Base"
     }
 
     ssm_client = boto3.client('ssm', region_name=region)
-    param_path = "/".join(os_ssm_ami_map[os_type].split("/")[:-1])
+    param_path = "/".join(os_ssm_ami_map[ami_name].split("/")[:-1])
     ssm_params_with_values = ssm_client.get_parameters_by_path(Path=param_path)
     next_token = ssm_params_with_values.get('NextToken')
 
     while next_token:
         for p in ssm_params_with_values['Parameters']:
-            if p['Name'] == os_ssm_ami_map[os_type]:
+            if p['Name'] == os_ssm_ami_map[ami_name]:
                 return p['Value']
+            else:
+                print(".")
         if next_token:
             ssm_params_with_values = ssm_client.get_parameters_by_path(Path=param_path, NextToken=next_token)
             next_token = ssm_params_with_values.get('NextToken')
