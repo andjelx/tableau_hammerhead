@@ -364,8 +364,6 @@ def get_latest_ami(ami_name: str, region: str) -> str:
         for p in ssm_params_with_values['Parameters']:
             if p['Name'] == os_ssm_ami_map[ami_name]:
                 return p['Value']
-            else:
-                print(".")
         if next_token:
             ssm_params_with_values = ssm_client.get_parameters_by_path(Path=param_path, NextToken=next_token)
             next_token = ssm_params_with_values.get('NextToken')
