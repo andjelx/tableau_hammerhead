@@ -30,6 +30,7 @@ Sep 25 2020
 - Keep AWS region in config files
 - Update CLI s3 access pre-checks approach
 
+
 Sep 24 2020
 
 - Added txt file creation containing server config info 
